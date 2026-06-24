@@ -1,4 +1,4 @@
-# Unit Testing in Go — 29 Patterns from Real Projects
+# Unit Testing in Go — Patterns from real projects
 
 Full documentation site: https://padiazg.github.io/unit-test-book
 
