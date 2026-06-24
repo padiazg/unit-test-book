@@ -27,6 +27,8 @@ jobs:
           python-version: '3.x'
       - name: Install MkDocs
         run: pip install mkdocs-material pymdown-extensions
+      - name: Generate pages
+        run: python3 doc/generate.py
       - name: Build docs
         working-directory: 'doc'
         run: mkdocs build --strict
