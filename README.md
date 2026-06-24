@@ -1,20 +1,36 @@
 # Unit Testing in Go — 29 Patterns from Real Projects
 
-Full documentation: https://padiazg.github.io/unit-test-book
+Full documentation site: https://padiazg.github.io/unit-test-book
 
-This repository contains the MkDocs source for the book at the above URL.
+A hands-on guide to Go unit testing through real-world patterns extracted from 7 production Go projects.
 
-**Contents:**
+Each chapter is a **standalone Go module** (`chapter-XX-*/`) with production code, tests, and an explanation of the testing approach.
 
-- `doc/docs/` — markdown pages (29 chapter pages + 7 section indexes + home)
-- `doc/mkdocs.yml` — site configuration
-- `doc/generate.py` — generates mkdocs pages from chapter README files
+## Run the code
 
-**Build locally:**
+```bash
+# Run tests for a specific chapter
+cd chapter-01-classic-table-driven
+go test -v ./...
+
+# Run all chapter tests
+go test ./chapter-*/...
+```
+
+## Repository structure
+
+| Path | Description |
+|------|-------------|
+| `chapter-XX-*/` | 29 standalone Go modules with code + tests + README |
+| `doc/` | MkDocs site (generates the documentation site) |
+| `doc/docs/` | Generated markdown pages (37 files) |
+| `doc/generate.py` | Script that builds mkdocs pages from chapter READMEs |
+| `doc/mkdocs.yml` | MkDocs site configuration |
+
+## Build docs locally
 
 ```bash
 cd doc
 pip install mkdocs-material pymdown-extensions
-mkdics build
 mkdocs serve
 ```

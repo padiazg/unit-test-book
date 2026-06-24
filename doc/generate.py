@@ -197,7 +197,11 @@ def generate():
 
         lines = [f"# {title}", "", desc, "", "## Chapters"]
         for num, p_slug, one_liner in pages:
-            lines.append(f"- [{p_slug}.md]({p_slug}.md) -- {one_liner}")
+            source = p_slug
+            lines.append(f"- [{p_slug}.md]({p_slug}.md) — {one_liner}  \n  Source: `{source}/`")
+        lines.extend(["", "## Running the code", "",
+                       "Each chapter is a standalone Go module. To run tests for a chapter:",
+                       "", "```bash", "cd <source-directory>", "go test -v ./...", "```"])
         lines.append("")
 
         with open(index_path, "w") as f:
