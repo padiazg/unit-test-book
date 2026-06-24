@@ -16,32 +16,32 @@ Real-world examples:
 package value_assertions
 
 func ParseInt(input string) int {
-	if len(input) == 0 {
-		return 0
-	}
+    if len(input) == 0 {
+        return 0
+    }
 
-	var (
-		result int
-		sign   = 1
-		start  = 0
-	)
+    var (
+        result int
+        sign   = 1
+        start  = 0
+    )
 
-	if input[0] == '-' {
-		sign = -1
-		start = 1
-	} else if input[0] == '+' {
-		start = 1
-	}
+    if input[0] == '-' {
+        sign = -1
+        start = 1
+    } else if input[0] == '+' {
+        start = 1
+    }
 
-	for i := start; i < len(input); i++ {
-		ch := input[i]
-		if ch < '0' || ch > '9' {
-			return 0
-		}
-		result = result*10 + int(ch-'0')
-	}
+    for i := start; i < len(input); i++ {
+        ch := input[i]
+        if ch < '0' || ch > '9' {
+            return 0
+        }
+        result = result*10 + int(ch-'0')
+    }
 
-	return result * sign
+    return result * sign
 }
 ```
 
@@ -49,27 +49,27 @@ func ParseInt(input string) int {
 
 ```go
 func TestParseInt(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-		want  int
-	}{
-		{name: "valid positive", input: "42", want: 42},
-		{name: "valid zero", input: "0", want: 0},
-		{name: "valid negative", input: "-5", want: -5},
-		{name: "leading plus", input: "+7", want: 7},
-		{name: "empty string", input: "", want: 0},
-		{name: "non-numeric", input: "abc", want: 0},
-		{name: "with spaces", input: " 3", want: 0},
-		{name: "trailing chars", input: "12ab", want: 0},
-	}
+    tests := []struct {
+        name  string
+        input string
+        want  int
+    }{
+        {name: "valid positive", input: "42", want: 42},
+        {name: "valid zero", input: "0", want: 0},
+        {name: "valid negative", input: "-5", want: -5},
+        {name: "leading plus", input: "+7", want: 7},
+        {name: "empty string", input: "", want: 0},
+        {name: "non-numeric", input: "abc", want: 0},
+        {name: "with spaces", input: " 3", want: 0},
+        {name: "trailing chars", input: "12ab", want: 0},
+    }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ParseInt(tt.input)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            got := ParseInt(tt.input)
+            assert.Equal(t, tt.want, got)
+        })
+    }
 }
 ```
 
