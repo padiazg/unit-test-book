@@ -5,9 +5,10 @@
 Extends the classic table-driven test with a `want T` field for expected return values. Used for pure functions that map an input deterministically to an output — no side effects, no errors, just input → output. The assertion becomes a simple `assert.Equal(t, tt.want, got)`.
 
 Real-world examples:
-- `go-testgen/internal/utils/parse_test.go:9` — `TestParseInt`
-- `go-testgen/internal/generator/generator_test.go:105` — `TestQualifiedTypeName_Array`
-- `hexago/pkg/version/version_test.go:141` — `TestVersionString`
+
+- `go-testgen/internal/utils/parse_test.go:9` — `TestParseInt`  
+- `go-testgen/internal/generator/generator_test.go:105` — `TestQualifiedTypeName_Array`  
+- `hexago/pkg/version/version_test.go:141` — `TestVersionString`  
 
 ## Code
 

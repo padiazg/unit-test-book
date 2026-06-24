@@ -5,7 +5,8 @@
 When a constructor or method takes many parameters, inline all of them in the test case table makes rows wide and hard to read. The solution: define a `fields` struct type in the test that groups related inputs. Each test case has a `fields` field, and the test body unpacks it into the SUT constructor.
 
 Real-world example:
-- `hexago/pkg/version/version_test.go:141` — `TestVersionString` uses `type fields struct { Version, Commit, BuildDate string }`
+
+- `hexago/pkg/version/version_test.go:141` — `TestVersionString` uses `type fields struct { Version, Commit, BuildDate string }`  
 
 ## Code
 

@@ -5,7 +5,8 @@
 Using package-level constants for test case names ensures consistency across multiple test functions that exercise the same domain concept. When the same constant (`orderID_001`) appears in `TestOrder_Confirm`, `TestOrder_Cancel`, and `TestOrder_Ship`, it signals these tests are testing the same entity. Constants also serve as documentation — they name the test case and the test value simultaneously.
 
 Real-world example:
-- `hexago/pkg/version/version_test.go:8-13` — constants like `version_0_0_1`, `version_0_0_1_rc_1` reuse across `TestVersionParseVersion`, `TestVersionParseDate`, `TestVersionString`
+
+- `hexago/pkg/version/version_test.go:8-13` — constants like `version_0_0_1`, `version_0_0_1_rc_1` reuse across `TestVersionParseVersion`, `TestVersionParseDate`, `TestVersionString`  
 
 ## Code
 

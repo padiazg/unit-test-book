@@ -5,9 +5,10 @@
 A test that only checks `err != nil` misses half the story. Error message verification asserts that the error message *contains* expected text using `assert.Contains(t, err.Error(), want)`. This ensures the right error context is propagated — critical for debugging production failures where the difference between "not found" and "invalid input" determines the recovery path.
 
 Real-world examples:
-- `pantry/internal/core/domain/product_test.go:101` — `assert.Containsf(t, err.Error(), want, ...)`
-- `notifier/model/test_utils.go:51-52` — `CheckResultError` uses `assert.Contains`
-- `go-crap/internal/scan/scan_test.go:29-39` — `checkScanError(want string)`
+
+- `pantry/internal/core/domain/product_test.go:101` — `assert.Containsf(t, err.Error(), want, ...)`  
+- `notifier/model/test_utils.go:51-52` — `CheckResultError` uses `assert.Contains`  
+- `go-crap/internal/scan/scan_test.go:29-39` — `checkScanError(want string)`  
 
 ## Code
 

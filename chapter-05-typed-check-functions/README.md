@@ -5,9 +5,10 @@
 A typed check function is a function type alias for test assertions: `type checkTransferFn func(*testing.T, *TransferResult, error)`. Instead of inline `if` blocks inside each subtest, check functions are defined once and reused across test cases. They become composable, named assertion blocks that separate *what to check* from *how to check it*.
 
 Real-world examples:
-- `pantry/internal/core/domain/product_test.go:89` — `checkProductApplyMovementFn`
-- `jokes/internal/adapters/secondary/external/joke_client_test.go:11` — `NewJokeClientFn`
-- `notifier/model/test_utils.go:10-11` — `TestCheckNotifierFn`, `TestCheckResultFn`
+
+- `pantry/internal/core/domain/product_test.go:89` — `checkProductApplyMovementFn`  
+- `jokes/internal/adapters/secondary/external/joke_client_test.go:11` — `NewJokeClientFn`  
+- `notifier/model/test_utils.go:10-11` — `TestCheckNotifierFn`, `TestCheckResultFn`  
 
 ## Code
 

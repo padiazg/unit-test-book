@@ -5,9 +5,10 @@
 A var-level helper function wraps check functions into a slice: `var checkXxx = func(fns ...checkXxxFn) []checkXxxFn { return fns }`. This gives callers a clean, expressive API: `checks: checkValidate(checkValid(true), checkErrorCount(1))` instead of the noisier `checks: []checkValidateFn{checkValid(true), checkErrorCount(1)}`.
 
 Real-world examples:
-- `pantry/internal/core/domain/product_test.go:91` — `var checkProductApplyMovement`
-- `notifier/model/test_utils.go:13-19` — `CheckNotifier`, `CheckResult`
-- `jokes/internal/adapters/secondary/external/joke_client_test.go:13` — `checkNewJokeClient`
+
+- `pantry/internal/core/domain/product_test.go:91` — `var checkProductApplyMovement`  
+- `notifier/model/test_utils.go:13-19` — `CheckNotifier`, `CheckResult`  
+- `jokes/internal/adapters/secondary/external/joke_client_test.go:13` — `checkNewJokeClient`  
 
 ## Code
 

@@ -5,10 +5,11 @@
 A check factory is a function that takes expected values as parameters and returns a check closure: `checkValue(want float64) checkConvertFn { return func(t *testing.T, got Temperature, err error) { assert.Equal(t, want, got.Value) } }`. The closure *captures* the expected value at test-definition time and asserts against the actual result at test-execution time.
 
 Real-world examples:
-- `pantry/internal/core/domain/product_test.go:93-103` — `checkApplyMovementError(want string)`
-- `go-crap/internal/report/table_test.go:21-26` — `checkOutputContains(want string)`
-- `go-crap/internal/report/json_test.go:100-111` — `checkReportSchema`, `checkReportVersion`
-- `notifier/connector/webhook/webhook_test.go:28-43` — `checkName(name string)`
+
+- `pantry/internal/core/domain/product_test.go:93-103` — `checkApplyMovementError(want string)`  
+- `go-crap/internal/report/table_test.go:21-26` — `checkOutputContains(want string)`  
+- `go-crap/internal/report/json_test.go:100-111` — `checkReportSchema`, `checkReportVersion`  
+- `notifier/connector/webhook/webhook_test.go:28-43` — `checkName(name string)`  
 
 ## Code
 

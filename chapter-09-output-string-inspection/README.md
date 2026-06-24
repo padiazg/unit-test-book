@@ -7,8 +7,9 @@ When testing functions that produce formatted string output (tables, reports, co
 String inspection is the primary testing strategy for code generators. In `go-testgen`, generator tests verify that the generated source code contains expected function signatures, struct definitions, and assertion calls.
 
 Real-world examples:
-- `go-testgen/internal/generator/generator_test.go:59-65` — verifying test source code has `type FooFn func(`, `var checkFoo = func(`, `func TestFoo(t *testing.T)`
-- `go-testgen/internal/generator/gen_table_test.go:17-23` — table generator output must contain `want string`, `wantErr string`, `assert.Equal`
+
+- `go-testgen/internal/generator/generator_test.go:59-65` — verifying test source code has `type FooFn func(`, `var checkFoo = func(`, `func TestFoo(t *testing.T)`  
+- `go-testgen/internal/generator/gen_table_test.go:17-23` — table generator output must contain `want string`, `wantErr string`, `assert.Equal`  
 
 ## Code
 
