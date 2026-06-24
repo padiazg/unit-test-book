@@ -4,10 +4,11 @@
 
 The most common Go testing pattern: a constructor that returns `(T, error)` is tested by enumerating valid and invalid inputs. Each test case has a `wantErr bool` that drives a branch: on expected errors, assert error presence and nil result; on success, assert no error and non-nil result with correct field values.
 
-Real-world examples:
-- `pantry/internal/core/domain/product_test.go:13` — `TestNewProduct`
-- `pantry/internal/core/domain/category_test.go:11` — `TestNewCategory`
-- `hexago/pkg/version/version_test.go:15` — `TestVersionParseVersion`
+Real-world examples:  
+
+- `pantry/internal/core/domain/product_test.go:13` — `TestNewProduct`  
+- `pantry/internal/core/domain/category_test.go:11` — `TestNewCategory`  
+- `hexago/pkg/version/version_test.go:15` — `TestVersionParseVersion`  
 
 ## Code
 

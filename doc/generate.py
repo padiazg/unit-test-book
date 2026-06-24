@@ -8,6 +8,7 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS_OUT = os.path.join(PROJECT_ROOT, "doc", "docs")
 CHAPTER_DIR = PROJECT_ROOT
+GITHUB_REPO = "https://github.com/padiazg/unit-test-book"
 
 SECTION_MAP = [
     ("foundations", "Foundations", (1, 4),
@@ -151,6 +152,8 @@ def write_chapter_page(out_dir, num, dirname, title, sections):
         parts.extend(["", "## Test", "", test])
     if approach:
         parts.extend(["", "## Testing Approach", "", approach])
+
+    parts.extend(["", "---", "", f"[View source code]({GITHUB_REPO}/tree/master/{dirname}/) on GitHub"])
 
     with open(out_path, "w") as f:
         f.write("\n".join(parts) + "\n")
