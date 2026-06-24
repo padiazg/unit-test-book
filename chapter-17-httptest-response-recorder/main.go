@@ -8,9 +8,9 @@ import (
 )
 
 type Task struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Completed   bool   `json:"completed"`
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Completed bool   `json:"completed"`
 }
 
 type TaskHandler struct{}
@@ -45,7 +45,7 @@ func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	task.ID = fmt.Sprintf("task-%d", len(task.Title))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(task)
+	_ = json.NewEncoder(w).Encode(task)
 }
 
 func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
@@ -61,10 +61,10 @@ func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Task{ID: id, Title: "Sample Task"})
+	_ = json.NewEncoder(w).Encode(Task{ID: id, Title: "Sample Task"})
 }
 
 func respondError(w http.ResponseWriter, status int, msg string) {
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }

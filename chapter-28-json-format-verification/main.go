@@ -7,12 +7,12 @@ import (
 )
 
 type Order struct {
+	CreatedAt time.Time `json:"created_at"`
 	ID        string    `json:"id"`
+	Status    string    `json:"status"`
 	UserID    string    `json:"user_id"`
 	Items     []Item    `json:"items"`
 	Total     float64   `json:"total"`
-	CreatedAt time.Time `json:"created_at"`
-	Status    string    `json:"status"`
 }
 
 type Item struct {
@@ -23,16 +23,16 @@ type Item struct {
 }
 
 type APIResponse struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
-	Meta    *Meta       `json:"meta,omitempty"`
+	Data    any    `json:"data,omitempty"`
+	Meta    *Meta  `json:"meta,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Success bool   `json:"success"`
 }
 
 type Meta struct {
-	Total   int `json:"total"`
-	Offset  int `json:"offset"`
-	Limit   int `json:"limit"`
+	Total  int `json:"total"`
+	Offset int `json:"offset"`
+	Limit  int `json:"limit"`
 }
 
 func FormatOrder(order Order) (string, error) {
@@ -51,7 +51,7 @@ func ParseOrder(jsonStr string) (*Order, error) {
 	return &order, nil
 }
 
-func BuildSuccessResponse(data interface{}, meta *Meta) APIResponse {
+func BuildSuccessResponse(data any, meta *Meta) APIResponse {
 	return APIResponse{
 		Success: true,
 		Data:    data,
@@ -66,13 +66,13 @@ func BuildErrorResponse(err string) APIResponse {
 	}
 }
 
-func MustMarshal(v interface{}) string {
+func MustMarshal(v any) string {
 	data, _ := json.Marshal(v)
 	return string(data)
 }
 
 func ValidateOrderJSON(jsonStr string) error {
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
 		return fmt.Errorf("invalid JSON: %w", err)
 	}
@@ -96,7 +96,7 @@ func IsJSON(s string) bool {
 }
 
 func NormalizeJSON(s string) (string, error) {
-	var v interface{}
+	var v any
 	if err := json.Unmarshal([]byte(s), &v); err != nil {
 		return "", err
 	}
@@ -108,14 +108,14 @@ func NormalizeJSON(s string) (string, error) {
 }
 
 func CompactJSON(s string) string {
-	var v interface{}
-	json.Unmarshal([]byte(s), &v)
+	var v any
+	_ = json.Unmarshal([]byte(s), &v)
 	data, _ := json.Marshal(v)
 	return string(data)
 }
 
 func FormatJSON(s string) (string, error) {
-	var v interface{}
+	var v any
 	if err := json.Unmarshal([]byte(s), &v); err != nil {
 		return "", fmt.Errorf("invalid JSON: %w", err)
 	}
@@ -127,7 +127,7 @@ func FormatJSON(s string) (string, error) {
 }
 
 func ContainsJSONKey(jsonStr, key string) bool {
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal([]byte(jsonStr), &m); err != nil {
 		return false
 	}
@@ -135,8 +135,8 @@ func ContainsJSONKey(jsonStr, key string) bool {
 	return ok
 }
 
-func GetJSONValue(jsonStr, key string) (interface{}, error) {
-	var m map[string]interface{}
+func GetJSONValue(jsonStr, key string) (any, error) {
+	var m map[string]any
 	if err := json.Unmarshal([]byte(jsonStr), &m); err != nil {
 		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
@@ -148,11 +148,11 @@ func GetJSONValue(jsonStr, key string) (interface{}, error) {
 }
 
 type Product struct {
+	Description string   `json:"description,omitempty"`
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
-	Price       float64  `json:"price"`
 	Tags        []string `json:"tags,omitempty"`
-	Description string   `json:"description,omitempty"`
+	Price       float64  `json:"price"`
 }
 
 func SerializeInventory(products []Product) (string, error) {
@@ -160,12 +160,12 @@ func SerializeInventory(products []Product) (string, error) {
 	return FormatJSON(Serialize(resp))
 }
 
-func Serialize(v interface{}) string {
+func Serialize(v any) string {
 	data, _ := json.Marshal(v)
 	return string(data)
 }
 
-func MustFormat(v interface{}) string {
+func MustFormat(v any) string {
 	data, _ := json.MarshalIndent(v, "", "  ")
 	return string(data)
 }

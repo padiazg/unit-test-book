@@ -22,9 +22,9 @@ const (
 )
 
 type Order struct {
+	Status OrderStatus
 	ID     string
 	Amount float64
-	Status OrderStatus
 }
 
 func NewOrder(id string, amount float64) *Order {

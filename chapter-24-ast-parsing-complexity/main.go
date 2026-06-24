@@ -8,9 +8,9 @@ import (
 )
 
 type ComplexityResult struct {
+	Position   token.Position
 	FuncName   string
 	Complexity int
-	Position   token.Position
 }
 
 func AnalyzeComplexity(src string) ([]ComplexityResult, error) {

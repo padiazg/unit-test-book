@@ -44,10 +44,10 @@ func TestConvert(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		input    Temperature
-		target   TemperatureUnit
-		checks   []checkConvertFn
+		name   string
+		input  Temperature
+		target TemperatureUnit
+		checks []checkConvertFn
 	}{
 		{
 			name:   "Celsius to Fahrenheit",

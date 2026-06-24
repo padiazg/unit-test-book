@@ -10,7 +10,7 @@ import (
 
 func TestDatabase_InsertAndQuery(t *testing.T) {
 	db := NewDatabase()
-	err := db.Insert("users", map[string]interface{}{"name": "Alice", "age": 30})
+	err := db.Insert("users", map[string]any{"name": "Alice", "age": 30})
 	require.NoError(t, err)
 
 	rows, err := db.Query("users")
@@ -27,14 +27,14 @@ func TestDatabase_QueryNonExistent(t *testing.T) {
 
 func TestDatabase_Count(t *testing.T) {
 	db := NewDatabase()
-	db.Insert("items", map[string]interface{}{"id": 1})
-	db.Insert("items", map[string]interface{}{"id": 2})
+	db.Insert("items", map[string]any{"id": 1})
+	db.Insert("items", map[string]any{"id": 2})
 	assert.Equal(t, 2, db.Count("items"))
 }
 
 func TestDatabase_Truncate(t *testing.T) {
 	db := NewDatabase()
-	db.Insert("temp", map[string]interface{}{"id": 1})
+	db.Insert("temp", map[string]any{"id": 1})
 	assert.Equal(t, 1, db.Count("temp"))
 	db.Truncate("temp")
 	assert.Equal(t, 0, db.Count("temp"))
@@ -125,8 +125,8 @@ func TestDatabase_ConcurrentAccess(t *testing.T) {
 
 	t.Run("parallel inserts", func(t *testing.T) {
 		t.Parallel()
-		for i := 0; i < 10; i++ {
-			db.Insert("parallel_test", map[string]interface{}{"n": i})
+		for i := range 10 {
+			db.Insert("parallel_test", map[string]any{"n": i})
 		}
 	})
 

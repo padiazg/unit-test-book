@@ -7,8 +7,8 @@ import (
 
 type ReportRow struct {
 	Label string
-	Value int
 	Unit  string
+	Value int
 }
 
 func FormatTable(rows []ReportRow) string {
@@ -21,7 +21,7 @@ func FormatTable(rows []ReportRow) string {
 	b.WriteString("------------+-------+------\n")
 
 	for _, r := range rows {
-		b.WriteString(fmt.Sprintf("%-10s | %5d | %s\n", r.Label, r.Value, r.Unit))
+		fmt.Fprintf(&b, "%-10s | %5d | %s\n", r.Label, r.Value, r.Unit)
 	}
 
 	return b.String()
@@ -34,7 +34,7 @@ func FormatCSV(rows []ReportRow) string {
 
 	var b strings.Builder
 	for _, r := range rows {
-		b.WriteString(fmt.Sprintf("%s,%d,%s\n", r.Label, r.Value, r.Unit))
+		fmt.Fprintf(&b, "%s,%d,%s\n", r.Label, r.Value, r.Unit)
 	}
 
 	return b.String()

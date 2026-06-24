@@ -146,7 +146,7 @@ func TestJSONEqAssert(t *testing.T) {
 
 func TestFormatOrder_RoundTrip(t *testing.T) {
 	original := Order{
-		ID:  "ord_1",
+		ID: "ord_1",
 		Items: []Item{
 			{ProductID: "p1", Name: "Gadget", Quantity: 1, Price: 49.99},
 		},

@@ -42,11 +42,11 @@ func TestTaskHandler_CreateTask(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		method  string
-		ctype   string
-		body    string
-		checks  []checkHandlerFn
+		name   string
+		method string
+		ctype  string
+		body   string
+		checks []checkHandlerFn
 	}{
 		{
 			name:   "successful creation",

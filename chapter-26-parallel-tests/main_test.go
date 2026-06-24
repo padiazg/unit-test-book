@@ -10,12 +10,10 @@ import (
 func TestUnsafeCounter_ParallelRace(t *testing.T) {
 	c := &UnsafeCounter{}
 	var wg sync.WaitGroup
-	for i := 0; i < 1000; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 1000 {
+		wg.Go(func() {
 			c.Increment()
-		}()
+		})
 	}
 	wg.Wait()
 	t.Logf("UnsafeCounter final value: %d (expected 1000)", c.Value())
@@ -24,12 +22,10 @@ func TestUnsafeCounter_ParallelRace(t *testing.T) {
 func TestSafeCounter_Parallel(t *testing.T) {
 	c := &SafeCounter{}
 	var wg sync.WaitGroup
-	for i := 0; i < 1000; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 1000 {
+		wg.Go(func() {
 			c.Increment()
-		}()
+		})
 	}
 	wg.Wait()
 	assert.Equal(t, 1000, c.Value())
@@ -38,12 +34,10 @@ func TestSafeCounter_Parallel(t *testing.T) {
 func TestAtomicCounter_Parallel(t *testing.T) {
 	c := &AtomicCounter{}
 	var wg sync.WaitGroup
-	for i := 0; i < 1000; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 1000 {
+		wg.Go(func() {
 			c.Increment()
-		}()
+		})
 	}
 	wg.Wait()
 	assert.Equal(t, int64(1000), c.Value())
@@ -52,7 +46,7 @@ func TestAtomicCounter_Parallel(t *testing.T) {
 func TestSliceWriter_Parallel(t *testing.T) {
 	w := &SliceWriter{}
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -77,7 +71,7 @@ func TestCache_Parallel(t *testing.T) {
 	c := NewCache()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
@@ -115,7 +109,6 @@ func TestParallelSubtests(t *testing.T) {
 	values := []int{1, 2, 3, 4, 5}
 
 	for _, v := range values {
-		v := v
 		t.Run("", func(t *testing.T) {
 			t.Parallel()
 			assert.Greater(t, v, 0)

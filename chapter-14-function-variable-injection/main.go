@@ -10,16 +10,16 @@ import (
 )
 
 type WebhookPayload struct {
-	Event     string    `json:"event"`
-	Data      string    `json:"data"`
 	Timestamp time.Time `json:"timestamp"`
+	Data      string    `json:"data"`
+	Event     string    `json:"event"`
 }
 
 type WebhookSender struct {
-	Endpoint       string
-	client         HTTPClient
-	jsonMarshal    func(v any) ([]byte, error)
 	httpNewRequest func(method, url string, body io.Reader) (*http.Request, error)
+	jsonMarshal    func(v any) ([]byte, error)
+	client         HTTPClient
+	Endpoint       string
 }
 
 func NewWebhookSender(endpoint string) *WebhookSender {

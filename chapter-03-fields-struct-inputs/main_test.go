@@ -6,12 +6,12 @@ import (
 
 func TestProduct_String(t *testing.T) {
 	type fields struct {
-		Code        string
-		Name        string
 		Category    string
-		Description string
-		UnitPrice   float64
+		Code        string
 		Currency    string
+		Description string
+		Name        string
+		UnitPrice   float64
 	}
 
 	tests := []struct {
@@ -60,10 +60,10 @@ func TestProduct_String(t *testing.T) {
 
 func TestProduct_FormatShort(t *testing.T) {
 	tests := []struct {
-		name   string
-		code   string
-		pname  string
-		want   string
+		name  string
+		code  string
+		pname string
+		want  string
 	}{
 		{name: "standard", code: "P001", pname: "Mouse", want: "[P001] Mouse"},
 		{name: "empty code", code: "", pname: "Item", want: "[] Item"},

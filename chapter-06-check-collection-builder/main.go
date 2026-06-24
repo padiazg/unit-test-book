@@ -12,9 +12,9 @@ type Document struct {
 }
 
 type ValidationReport struct {
-	Valid   bool
-	Errors  []string
+	Errors   []string
 	Warnings []string
+	Valid    bool
 }
 
 func ValidateDocument(doc *Document) *ValidationReport {

@@ -16,14 +16,14 @@ func ConcatJoin(items []string) string {
 }
 
 func ConcatPlus(items []string) string {
-	out := ""
+	var out strings.Builder
 	for _, s := range items {
-		out += s + ","
+		out.WriteString(s + ",")
 	}
-	if len(out) > 0 {
-		return out[:len(out)-1]
+	if len(out.String()) > 0 {
+		return out.String()[:len(out.String())-1]
 	}
-	return out
+	return out.String()
 }
 
 func ConcatBuilder(items []string) string {
@@ -78,8 +78,6 @@ func FilterAdults(users []User) []User {
 	}
 	return out
 }
-
-var sink interface{}
 
 func SumInts(nums []int) int {
 	total := 0

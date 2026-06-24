@@ -26,11 +26,11 @@ const (
 )
 
 type APIClient struct {
-	Strategy    APIStrategy
+	now         func() time.Time
 	RateLimiter RateLimiter
+	Strategy    APIStrategy
 	APIKey      string
 	BaseURL     string
-	now         func() time.Time
 }
 
 func NewAPIClient(apiKey, baseURL string) *APIClient {
