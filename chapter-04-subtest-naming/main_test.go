@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	orderID_001  = "ORD-001"
-	orderAmount  = 99.50
+	orderID_001 = "ORD-001"
+	orderAmount = 99.50
 )
 
 func TestOrder_Confirm(t *testing.T) {

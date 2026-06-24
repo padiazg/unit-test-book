@@ -102,11 +102,11 @@ func TestProductService_GetProduct(t *testing.T) {
 
 func TestProductService_CreateProduct(t *testing.T) {
 	tests := []struct {
-		name       string
+		name        string
 		productName string
-		price      float64
-		mockFn     func(*mockProductRepository)
-		wantErr    bool
+		price       float64
+		mockFn      func(*mockProductRepository)
+		wantErr     bool
 	}{
 		{
 			name:        "success",

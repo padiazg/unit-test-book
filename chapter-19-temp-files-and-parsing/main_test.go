@@ -67,8 +67,8 @@ func TestLoadConfig(t *testing.T) {
 		cfg, err := LoadConfig(path)
 		require.NoError(t, err)
 		assert.Equal(t, "test.local", cfg.Host)
-		assert.Equal(t, 0, cfg.Port)       // zero value
-		assert.False(t, cfg.Debug)          // zero value
+		assert.Equal(t, 0, cfg.Port) // zero value
+		assert.False(t, cfg.Debug)   // zero value
 	})
 }
 
@@ -95,8 +95,8 @@ func TestLoadConfigWithDefaults(t *testing.T) {
 		cfg, err := LoadConfigWithDefaults(path)
 		require.NoError(t, err)
 		assert.Equal(t, "localhost", cfg.Host) // default
-		assert.Equal(t, 3000, cfg.Port)         // override
-		assert.Equal(t, 30, cfg.Timeout)        // default
+		assert.Equal(t, 3000, cfg.Port)        // override
+		assert.Equal(t, 30, cfg.Timeout)       // default
 	})
 }
 

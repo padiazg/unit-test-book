@@ -11,8 +11,8 @@ const (
 )
 
 type Temperature struct {
-	Value float64
 	Unit  TemperatureUnit
+	Value float64
 }
 
 func Convert(t Temperature, to TemperatureUnit) (Temperature, error) {

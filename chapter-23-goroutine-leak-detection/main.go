@@ -14,7 +14,7 @@ type WorkerPool struct {
 func NewWorkerPool(workers int, jobs <-chan int, results chan<- string) *WorkerPool {
 	wp := &WorkerPool{}
 
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		wp.wg.Add(1)
 		go func(id int) {
 			defer wp.wg.Done()
@@ -59,9 +59,7 @@ func NewSafeProcessor() *SafeProcessor {
 func (sp *SafeProcessor) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	sp.cancel = cancel
-	sp.wg.Add(1)
-	go func() {
-		defer sp.wg.Done()
+	sp.wg.Go(func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -70,7 +68,7 @@ func (sp *SafeProcessor) Start() {
 				time.Sleep(100 * time.Millisecond)
 			}
 		}
-	}()
+	})
 }
 
 func (sp *SafeProcessor) Stop() {
@@ -207,7 +205,7 @@ func DoConcurrentWork() error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, 1)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()

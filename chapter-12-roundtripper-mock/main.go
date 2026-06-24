@@ -9,14 +9,14 @@ import (
 
 type GitHubUser struct {
 	Login string `json:"login"`
-	ID    int    `json:"id"`
 	Name  string `json:"name"`
 	URL   string `json:"html_url"`
+	ID    int    `json:"id"`
 }
 
 type GitHubClient struct {
-	BaseURL string
 	client  *http.Client
+	BaseURL string
 }
 
 func NewGitHubClient(baseURL string) *GitHubClient {

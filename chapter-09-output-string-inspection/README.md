@@ -16,8 +16,8 @@ Real-world examples:
 ```go
 type ReportRow struct {
 	Label string
-	Value int
 	Unit  string
+	Value int
 }
 
 func FormatTable(rows []ReportRow) string {
@@ -68,6 +68,17 @@ func TestFormatTable(t *testing.T) {
 			),
 		},
 		{
+			name: "single row",
+			rows: []ReportRow{{Label: "CPU", Value: 45, Unit: "%"}},
+			checks: checkFormatTable(
+				checkContains("CPU"),
+				checkContains("45"),
+				checkContains("%"),
+				checkContains("LABEL"),
+				checkNotContains("MEM"),
+			),
+		},
+		{
 			name: "multiple rows",
 			rows: []ReportRow{
 				{Label: "CPU", Value: 45, Unit: "%"},
@@ -92,6 +103,10 @@ func TestFormatCSV(t *testing.T) {
 	}{
 		{name: "empty", rows: nil, want: ""},
 		{name: "single", rows: []ReportRow{{Label: "CPU", Value: 45, Unit: "%"}}, want: "CPU,45,%\n"},
+		{name: "multiple", rows: []ReportRow{
+			{Label: "CPU", Value: 45, Unit: "%"},
+			{Label: "MEM", Value: 2048, Unit: "MB"},
+		}, want: "CPU,45,%\nMEM,2048,MB\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

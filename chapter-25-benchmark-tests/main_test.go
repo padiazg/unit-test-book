@@ -1,6 +1,7 @@
 package benchmark_tests
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -8,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var sink string
 
 func TestConcatJoin(t *testing.T) {
 	assert.Equal(t, "a,b,c", ConcatJoin([]string{"a", "b", "c"}))
@@ -193,7 +196,7 @@ func BenchmarkSortStdLib(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			tmp := make([]int, len(nums))
 			copy(tmp, nums)
-			sort.Slice(tmp, func(i, j int) bool { return tmp[i] < tmp[j] })
+			slices.Sort(tmp)
 		}
 	})
 }

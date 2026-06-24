@@ -4,7 +4,10 @@ test:
 	go test -race -count=1 ./chapter-*/...
 
 lint:
-	golangci-lint run ./...
+	find . -name go.mod -execdir golangci-lint run ./... \;
+
+fix:
+	find . -name go.mod -execdir go fix \;
 
 fmt:
 	gofmt -s -w .

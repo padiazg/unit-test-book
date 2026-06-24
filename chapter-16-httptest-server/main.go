@@ -8,8 +8,8 @@ import (
 )
 
 type UserAPI struct {
-	BaseURL string
 	client  *http.Client
+	BaseURL string
 }
 
 func NewUserAPI(baseURL string) *UserAPI {
@@ -17,9 +17,9 @@ func NewUserAPI(baseURL string) *UserAPI {
 }
 
 type User struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
 	Email string `json:"email"`
+	Name  string `json:"name"`
+	ID    int    `json:"id"`
 }
 
 func (api *UserAPI) GetUser(id int) (*User, error) {
@@ -61,6 +61,6 @@ func (api *UserAPI) CreateUser(name, email string) (*User, error) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var user User
-	json.Unmarshal(body, &user)
+	_ = json.Unmarshal(body, &user)
 	return &user, nil
 }

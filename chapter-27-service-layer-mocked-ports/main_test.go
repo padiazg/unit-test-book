@@ -12,19 +12,30 @@ type checkUserServiceFn func(*testing.T, *User, error)
 
 var checkUserService = func(fns ...checkUserServiceFn) []checkUserServiceFn { return fns }
 
-func checkUser(name string) checkUserServiceFn {
+func checkUser(name, email string) checkUserServiceFn {
 	return func(t *testing.T, u *User, err error) {
 		t.Helper()
 		require.NoError(t, err)
+		require.NotNil(t, u)
 		assert.Equal(t, name, u.Name)
+		assert.Equal(t, email, u.Email)
 	}
 }
 
-func checkError(want string) checkUserServiceFn {
+func checkNoError() checkUserServiceFn {
+	return func(t *testing.T, u *User, err error) {
+		t.Helper()
+		require.NoError(t, err)
+	}
+}
+
+func checkError(want error) checkUserServiceFn {
 	return func(t *testing.T, u *User, err error) {
 		t.Helper()
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), want)
+		if want != nil {
+			assert.ErrorIs(t, err, want)
+		}
 	}
 }
 
@@ -62,128 +73,227 @@ func (m *mockEmailSender) SendWelcome(user *User) error {
 	return args.Error(0)
 }
 
+type testFixtures struct {
+	repo  *mockUserRepository
+	email *mockEmailSender
+}
+
+func (f *testFixtures) Teardown(t *testing.T) {
+	t.Helper()
+	f.repo.AssertExpectations(t)
+	f.email.AssertExpectations(t)
+}
+
+func setupService(t *testing.T) (*UserService, *testFixtures) {
+	t.Helper()
+	repo := &mockUserRepository{}
+	email := &mockEmailSender{}
+	svc := NewUserService(repo, email)
+	return svc, &testFixtures{repo: repo, email: email}
+}
+
 func TestUserService_Register(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		repo := &mockUserRepository{}
-		email := &mockEmailSender{}
+	tests := []struct {
+		name    string
+		nameArg string
+		email   string
+		age     int
+		before  func(*testFixtures)
+		checks  []checkUserServiceFn
+	}{
+		{
+			name:    "success",
+			nameArg: "Alice",
+			email:   "alice@test.com",
+			age:     30,
+			before: func(f *testFixtures) {
+				f.repo.On("FindByEmail", "alice@test.com").Return(nil, nil)
+				f.repo.On("Save", mock.MatchedBy(func(u *User) bool {
+					return u.Email == "alice@test.com"
+				})).Return(nil)
+				f.email.On("SendWelcome", mock.MatchedBy(func(u *User) bool {
+					return u.Email == "alice@test.com"
+				})).Return(nil)
+			},
+			checks: checkUserService(
+				checkUser("Alice", "alice@test.com"),
+			),
+		},
+		{
+			name:    "empty email",
+			nameArg: "Alice",
+			email:   "",
+			age:     30,
+			before:  nil,
+			checks: checkUserService(
+				checkError(ErrEmailRequired),
+			),
+		},
+		{
+			name:    "duplicate email",
+			nameArg: "Alice",
+			email:   "alice@test.com",
+			age:     30,
+			before: func(f *testFixtures) {
+				f.repo.On("FindByEmail", "alice@test.com").Return(&User{ID: "usr_old", Email: "alice@test.com"}, nil)
+			},
+			checks: checkUserService(
+				checkError(ErrDuplicateEmail),
+			),
+		},
+		{
+			name:    "notification failure",
+			nameArg: "Alice",
+			email:   "alice@test.com",
+			age:     30,
+			before: func(f *testFixtures) {
+				f.repo.On("FindByEmail", "alice@test.com").Return(nil, nil)
+				f.repo.On("Save", mock.Anything).Return(nil)
+				f.email.On("SendWelcome", mock.Anything).Return(ErrNotification)
+			},
+			checks: checkUserService(
+				checkError(ErrNotification),
+			),
+		},
+	}
 
-		repo.On("FindByEmail", "alice@test.com").Return(nil, nil)
-		repo.On("Save", mock.MatchedBy(func(u *User) bool {
-			return u.Email == "alice@test.com"
-		})).Return(nil)
-		email.On("SendWelcome", mock.MatchedBy(func(u *User) bool {
-			return u.Email == "alice@test.com"
-		})).Return(nil)
-
-		svc := NewUserService(repo, email)
-		user, err := svc.Register("Alice", "alice@test.com", 30)
-		require.NoError(t, err)
-		assert.Equal(t, "Alice", user.Name)
-		assert.Equal(t, "alice@test.com", user.Email)
-		repo.AssertExpectations(t)
-		email.AssertExpectations(t)
-	})
-
-	t.Run("empty email", func(t *testing.T) {
-		svc := NewUserService(&mockUserRepository{}, &mockEmailSender{})
-		_, err := svc.Register("Alice", "", 30)
-		assert.ErrorIs(t, err, ErrEmailRequired)
-	})
-
-	t.Run("duplicate email", func(t *testing.T) {
-		repo := &mockUserRepository{}
-		email := &mockEmailSender{}
-
-		existing := &User{ID: "usr_old", Email: "alice@test.com"}
-		repo.On("FindByEmail", "alice@test.com").Return(existing, nil)
-
-		svc := NewUserService(repo, email)
-		_, err := svc.Register("Alice", "alice@test.com", 30)
-		assert.ErrorIs(t, err, ErrDuplicateEmail)
-		repo.AssertExpectations(t)
-	})
-
-	t.Run("notification failure", func(t *testing.T) {
-		repo := &mockUserRepository{}
-		email := &mockEmailSender{}
-
-		repo.On("FindByEmail", "alice@test.com").Return(nil, nil)
-		repo.On("Save", mock.Anything).Return(nil)
-		email.On("SendWelcome", mock.Anything).Return(ErrNotification)
-
-		svc := NewUserService(repo, email)
-		_, err := svc.Register("Alice", "alice@test.com", 30)
-		assert.ErrorIs(t, err, ErrNotification)
-		repo.AssertExpectations(t)
-		email.AssertExpectations(t)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, fixtures := setupService(t)
+			defer fixtures.Teardown(t)
+			if tt.before != nil {
+				tt.before(fixtures)
+			}
+			user, err := svc.Register(tt.nameArg, tt.email, tt.age)
+			for _, c := range tt.checks {
+				c(t, user, err)
+			}
+		})
+	}
 }
 
 func TestUserService_GetUser(t *testing.T) {
-	t.Run("existing user", func(t *testing.T) {
-		repo := &mockUserRepository{}
-		repo.On("FindByID", "usr_1").Return(&User{ID: "usr_1", Name: "Alice"}, nil)
+	tests := []struct {
+		name   string
+		id     string
+		before func(*testFixtures)
+		checks []checkUserServiceFn
+	}{
+		{
+			name: "existing user",
+			id:   "usr_1",
+			before: func(f *testFixtures) {
+				f.repo.On("FindByID", "usr_1").Return(&User{ID: "usr_1", Name: "Alice"}, nil)
+			},
+			checks: checkUserService(
+				checkUser("Alice", ""),
+			),
+		},
+		{
+			name: "user not found",
+			id:   "missing",
+			before: func(f *testFixtures) {
+				f.repo.On("FindByID", "missing").Return(nil, nil)
+			},
+			checks: checkUserService(
+				checkError(ErrUserNotFound),
+			),
+		},
+		{
+			name:   "empty id",
+			id:     "",
+			before: nil,
+			checks: checkUserService(
+				checkError(nil),
+			),
+		},
+	}
 
-		svc := NewUserService(repo, &mockEmailSender{})
-		user, err := svc.GetUser("usr_1")
-		require.NoError(t, err)
-		assert.Equal(t, "Alice", user.Name)
-	})
-
-	t.Run("user not found", func(t *testing.T) {
-		repo := &mockUserRepository{}
-		repo.On("FindByID", "missing").Return(nil, nil)
-
-		svc := NewUserService(repo, &mockEmailSender{})
-		_, err := svc.GetUser("missing")
-		assert.ErrorIs(t, err, ErrUserNotFound)
-	})
-
-	t.Run("empty id", func(t *testing.T) {
-		svc := NewUserService(&mockUserRepository{}, &mockEmailSender{})
-		_, err := svc.GetUser("")
-		assert.Error(t, err)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, fixtures := setupService(t)
+			defer fixtures.Teardown(t)
+			if tt.before != nil {
+				tt.before(fixtures)
+			}
+			user, err := svc.GetUser(tt.id)
+			for _, c := range tt.checks {
+				c(t, user, err)
+			}
+		})
+	}
 }
 
 func TestUserService_UpdateEmail(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		repo := &mockUserRepository{}
-		repo.On("FindByID", "usr_1").Return(&User{ID: "usr_1", Email: "old@test.com"}, nil)
-		repo.On("FindByEmail", "new@test.com").Return(nil, nil)
-		repo.On("Save", mock.MatchedBy(func(u *User) bool {
-			return u.Email == "new@test.com"
-		})).Return(nil)
+	tests := []struct {
+		name   string
+		id     string
+		email  string
+		before func(*testFixtures)
+		checks []checkUserServiceFn
+	}{
+		{
+			name:  "success",
+			id:    "usr_1",
+			email: "new@test.com",
+			before: func(f *testFixtures) {
+				f.repo.On("FindByID", "usr_1").Return(&User{ID: "usr_1", Email: "old@test.com"}, nil)
+				f.repo.On("FindByEmail", "new@test.com").Return(nil, nil)
+				f.repo.On("Save", mock.MatchedBy(func(u *User) bool {
+					return u.Email == "new@test.com"
+				})).Return(nil)
+			},
+			checks: checkUserService(
+				checkNoError(),
+			),
+		},
+		{
+			name:   "empty email",
+			id:     "usr_1",
+			email:  "",
+			before: nil,
+			checks: checkUserService(
+				checkError(ErrEmailRequired),
+			),
+		},
+		{
+			name:  "same email different user",
+			id:    "usr_1",
+			email: "taken@test.com",
+			before: func(f *testFixtures) {
+				f.repo.On("FindByID", "usr_1").Return(&User{ID: "usr_1", Email: "old@test.com"}, nil)
+				f.repo.On("FindByEmail", "taken@test.com").Return(&User{ID: "usr_2"}, nil)
+			},
+			checks: checkUserService(
+				checkError(ErrDuplicateEmail),
+			),
+		},
+		{
+			name:  "same email same user",
+			id:    "usr_1",
+			email: "same@test.com",
+			before: func(f *testFixtures) {
+				f.repo.On("FindByID", "usr_1").Return(&User{ID: "usr_1", Email: "old@test.com"}, nil)
+				f.repo.On("FindByEmail", "same@test.com").Return(&User{ID: "usr_1"}, nil)
+				f.repo.On("Save", mock.Anything).Return(nil)
+			},
+			checks: checkUserService(
+				checkNoError(),
+			),
+		},
+	}
 
-		svc := NewUserService(repo, &mockEmailSender{})
-		err := svc.UpdateEmail("usr_1", "new@test.com")
-		require.NoError(t, err)
-	})
-
-	t.Run("empty email", func(t *testing.T) {
-		svc := NewUserService(&mockUserRepository{}, &mockEmailSender{})
-		err := svc.UpdateEmail("usr_1", "")
-		assert.ErrorIs(t, err, ErrEmailRequired)
-	})
-
-	t.Run("same email different user", func(t *testing.T) {
-		repo := &mockUserRepository{}
-		repo.On("FindByID", "usr_1").Return(&User{ID: "usr_1", Email: "old@test.com"}, nil)
-		repo.On("FindByEmail", "taken@test.com").Return(&User{ID: "usr_2"}, nil)
-
-		svc := NewUserService(repo, &mockEmailSender{})
-		err := svc.UpdateEmail("usr_1", "taken@test.com")
-		assert.ErrorIs(t, err, ErrDuplicateEmail)
-	})
-
-	t.Run("same email same user", func(t *testing.T) {
-		repo := &mockUserRepository{}
-		repo.On("FindByID", "usr_1").Return(&User{ID: "usr_1", Email: "old@test.com"}, nil)
-		repo.On("FindByEmail", "same@test.com").Return(&User{ID: "usr_1"}, nil)
-		repo.On("Save", mock.Anything).Return(nil)
-
-		svc := NewUserService(repo, &mockEmailSender{})
-		err := svc.UpdateEmail("usr_1", "same@test.com")
-		require.NoError(t, err)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, fixtures := setupService(t)
+			defer fixtures.Teardown(t)
+			if tt.before != nil {
+				tt.before(fixtures)
+			}
+			err := svc.UpdateEmail(tt.id, tt.email)
+			for _, c := range tt.checks {
+				c(t, nil, err)
+			}
+		})
+	}
 }

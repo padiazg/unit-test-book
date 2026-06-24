@@ -8,33 +8,33 @@ import (
 
 type Database struct {
 	mu     sync.Mutex
-	tables map[string][]map[string]interface{}
+	tables map[string][]map[string]any
 }
 
 func NewDatabase() *Database {
 	return &Database{
-		tables: make(map[string][]map[string]interface{}),
+		tables: make(map[string][]map[string]any),
 	}
 }
 
-func (db *Database) Insert(table string, row map[string]interface{}) error {
+func (db *Database) Insert(table string, row map[string]any) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	if _, ok := db.tables[table]; !ok {
-		db.tables[table] = make([]map[string]interface{}, 0)
+		db.tables[table] = make([]map[string]any, 0)
 	}
 	db.tables[table] = append(db.tables[table], row)
 	return nil
 }
 
-func (db *Database) Query(table string) ([]map[string]interface{}, error) {
+func (db *Database) Query(table string) ([]map[string]any, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	rows, ok := db.tables[table]
 	if !ok {
 		return nil, fmt.Errorf("table %q not found", table)
 	}
-	out := make([]map[string]interface{}, len(rows))
+	out := make([]map[string]any, len(rows))
 	copy(out, rows)
 	return out, nil
 }
@@ -54,7 +54,7 @@ func (db *Database) Truncate(table string) {
 func (db *Database) Close() {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	db.tables = make(map[string][]map[string]interface{})
+	db.tables = make(map[string][]map[string]any)
 }
 
 type Fixture struct {
@@ -68,7 +68,7 @@ func NewFixture() *Fixture {
 }
 
 func (f *Fixture) Setup() {
-	f.DB.Insert("config", map[string]interface{}{"key": "version", "value": "1.0"})
+	_ = f.DB.Insert("config", map[string]any{"key": "version", "value": "1.0"})
 }
 
 func (f *Fixture) Teardown() {
@@ -76,7 +76,7 @@ func (f *Fixture) Teardown() {
 }
 
 func (f *Fixture) SeedUser(name, email string) {
-	f.DB.Insert("users", map[string]interface{}{
+	_ = f.DB.Insert("users", map[string]any{
 		"name":  name,
 		"email": email,
 	})
@@ -92,7 +92,7 @@ func NewTestSuite() *TestSuite {
 
 func (s *TestSuite) Setup() {
 	s.DB = NewDatabase()
-	s.DB.Insert("users", map[string]interface{}{"name": "Admin", "role": "admin"})
+	_ = s.DB.Insert("users", map[string]any{"name": "Admin", "role": "admin"})
 }
 
 func (s *TestSuite) Teardown() {

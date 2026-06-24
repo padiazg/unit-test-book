@@ -68,10 +68,10 @@ func (p *Processor) Wait() {
 }
 
 type Merger struct {
-	inputs []<-chan int
-	output chan<- int
-	wg     sync.WaitGroup
 	started chan struct{}
+	output  chan<- int
+	wg      sync.WaitGroup
+	inputs  []<-chan int
 }
 
 func NewMerger(output chan<- int, inputs ...<-chan int) *Merger {
@@ -114,7 +114,7 @@ func NewGenerator(output chan<- int) *Generator {
 
 func (g *Generator) Run(ctx context.Context, count int) {
 	defer close(g.output)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		select {
 		case <-ctx.Done():
 			return
@@ -131,11 +131,11 @@ func (g *Generator) Stop() {
 
 func FanOut(input <-chan int, workers int) []<-chan int {
 	outs := make([]chan int, workers)
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		outs[i] = make(chan int)
 	}
 
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		i := i
 		go func() {
 			for v := range input {
@@ -153,10 +153,10 @@ func FanOut(input <-chan int, workers int) []<-chan int {
 }
 
 type RunLoop struct {
-	ch       chan string
-	done     chan struct{}
-	handled  []string
-	mu       sync.Mutex
+	ch      chan string
+	done    chan struct{}
+	mu      sync.Mutex
+	handled []string
 }
 
 func NewRunLoop() *RunLoop {

@@ -10,9 +10,9 @@ const (
 )
 
 type Account struct {
+	Type    AccountType
 	ID      string
 	Owner   string
-	Type    AccountType
 	Balance float64
 }
 

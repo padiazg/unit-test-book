@@ -20,7 +20,7 @@ func RunPool(jobs []Job, workers int) []Result {
 	jobCh := make(chan Job, len(jobs))
 	resultCh := make(chan Result, len(jobs))
 
-	for i := 0; i < workers; i++ {
+	for range workers {
 		go Worker(jobCh, resultCh)
 	}
 
@@ -30,7 +30,7 @@ func RunPool(jobs []Job, workers int) []Result {
 	close(jobCh)
 
 	var out []Result
-	for i := 0; i < len(jobs); i++ {
+	for range jobs {
 		out = append(out, <-resultCh)
 	}
 	return out

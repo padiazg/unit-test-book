@@ -108,13 +108,10 @@ func SumConcurrently(nums []int, workers int) int {
 		wg    sync.WaitGroup
 	)
 
-	for i := 0; i < workers; i++ {
+	for i := range workers {
 		wg.Add(1)
 		start := i * chunkSize
-		end := start + chunkSize
-		if end > len(nums) {
-			end = len(nums)
-		}
+		end := min(start+chunkSize, len(nums))
 		go func(s, e int) {
 			defer wg.Done()
 			sum := 0

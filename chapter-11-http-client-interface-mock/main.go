@@ -12,9 +12,9 @@ type HTTPClient interface {
 }
 
 type WeatherClient struct {
-	BaseURL string
-	APIKey  string
 	client  HTTPClient
+	APIKey  string
+	BaseURL string
 }
 
 func NewWeatherClient(baseURL, apiKey string) *WeatherClient {
@@ -27,8 +27,8 @@ func NewWeatherClient(baseURL, apiKey string) *WeatherClient {
 
 type WeatherResponse struct {
 	City        string  `json:"city"`
-	Temperature float64 `json:"temperature"`
 	Unit        string  `json:"unit"`
+	Temperature float64 `json:"temperature"`
 }
 
 func (c *WeatherClient) GetWeather(city string) (*WeatherResponse, error) {

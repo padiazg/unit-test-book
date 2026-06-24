@@ -31,8 +31,8 @@ func TestFormatTable(t *testing.T) {
 		checks []checkFormatTableFn
 	}{
 		{
-			name:   "empty rows",
-			rows:   nil,
+			name: "empty rows",
+			rows: nil,
 			checks: checkFormatTable(
 				checkContains("(empty)"),
 				checkNotContains("LABEL"),
@@ -98,30 +98,4 @@ func TestFormatCSV(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
-
-func splitLines(s string) []string {
-	if s == "" {
-		return nil
-	}
-	var lines []string
-	for {
-		idx := indexOf(s, '\n')
-		if idx < 0 {
-			lines = append(lines, s)
-			break
-		}
-		lines = append(lines, s[:idx])
-		s = s[idx+1:]
-	}
-	return lines
-}
-
-func indexOf(s string, c byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == c {
-			return i
-		}
-	}
-	return -1
 }

@@ -16,12 +16,12 @@ package fields_struct_inputs
 import "fmt"
 
 type Product struct {
-	Code        string
-	Name        string
 	Category    string
-	Description string
-	UnitPrice   float64
+	Code        string
 	Currency    string
+	Description string
+	Name        string
+	UnitPrice   float64
 }
 
 func (p Product) String() string {

@@ -22,6 +22,8 @@ dist/
 *.swp
 *.swo
 
+vendor
+
 *.md
 !CHANGELOG.md
 !CODE_OF_CONDUCT.md

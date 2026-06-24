@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type checkRunLoopFn func(*testing.T, *RunLoop)
-
 func TestRunLoop_StartStop(t *testing.T) {
 	r := NewRunLoop()
 	r.Start()
@@ -33,7 +31,7 @@ func TestRunLoop_ConcurrentSubmissions(t *testing.T) {
 	r.Start()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()

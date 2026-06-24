@@ -23,7 +23,7 @@ func TestWorkerPool(t *testing.T) {
 
 	wp := NewWorkerPool(3, jobs, results)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		jobs <- i
 	}
 	close(jobs)
@@ -89,7 +89,7 @@ func TestUnboundedCache_Concurrent(t *testing.T) {
 	m := make(map[string]int)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()

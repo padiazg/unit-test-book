@@ -11,10 +11,11 @@ func ParseInt(input string) int {
 		start  = 0
 	)
 
-	if input[0] == '-' {
+	switch input[0] {
+	case '-':
 		sign = -1
 		start = 1
-	} else if input[0] == '+' {
+	case '+':
 		start = 1
 	}
 

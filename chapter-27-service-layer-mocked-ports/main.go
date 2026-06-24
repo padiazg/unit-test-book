@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	ErrUserNotFound    = errors.New("user not found")
-	ErrEmailRequired   = errors.New("email is required")
-	ErrNotification    = errors.New("notification failed")
-	ErrDuplicateEmail  = errors.New("email already exists")
+	ErrUserNotFound   = errors.New("user not found")
+	ErrEmailRequired  = errors.New("email is required")
+	ErrNotification   = errors.New("notification failed")
+	ErrDuplicateEmail = errors.New("email already exists")
 )
 
 type User struct {
