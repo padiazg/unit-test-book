@@ -81,7 +81,7 @@ The patterns in this book are extracted from these production Go projects:
 | Project | Description |
 |---------|-------------|
 | [hexago](https://github.com/padiazg/hexago) | Go project scaffolding with hexagonal architecture |
-| [jokes](https://github.com/padiazg/jokes) | Joke API client |
+| [chuck-norris-jokes](https://github.com/padiazg/chuck-norris-jokes) | Joke API client |
 | [go-testgen](https://github.com/padiazg/go-testgen) | Go test generator |
 | [go-crap](https://github.com/padiazg/go-crap) | CRAP score analysis tool |
 | [ollama-tools](https://github.com/padiazg/ollama-tools) | Ollama model tools |
