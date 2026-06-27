@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
     paths:
-      - chapter-*/
+      - chapters/chapter-*/
       - doc/**
       - .github/workflows/docs.yml
   workflow_dispatch:

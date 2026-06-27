@@ -3,18 +3,20 @@
 
 import os
 import re
+import shutil
 import sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS_OUT = os.path.join(PROJECT_ROOT, "doc", "docs")
 CHAPTER_DIR = PROJECT_ROOT
+CHAPTERS_DIR = os.path.join(PROJECT_ROOT, "chapters")
 GITHUB_REPO = "https://github.com/padiazg/unit-test-book"
 
 SECTION_MAP = [
     ("foundations", "Foundations", (1, 4),
      "Four classic table-driven testing patterns. Each chapter builds on the previous, from basic `wantErr` assertions through value inspection and subtest naming conventions."),
     ("closure-check", "Closure-Check", (5, 9),
-     "Five chapters constructing a composable assertion system. Starting from typed check functions, the pattern evolves through collection builders and factory closures into a reusable testing framework."),
+     "Seven chapters constructing a composable assertion system. Starting from typed check functions, the pattern evolves through collection builders, factory closures, inline checks, and composable navigators for nested output."),
     ("mocking", "Mocking", (10, 15),
      "Six techniques for isolating external dependencies. Covers HTTP client interfaces, RoundTripper transport mocking, testify/mock, function variable injection, and package-level var swap."),
     ("http-io", "HTTP / I/O", (16, 19),
@@ -57,6 +59,9 @@ CHAPTER_ONE_LINERS = {
     27: "Service Layer with Mocked Ports — mock repository and email interfaces to test business logic in isolation",
     28: "JSON Format Verification — `assert.JSONEq`, `json.MarshalIndent`, and round-trip serialization tests",
     29: "Setup/Teardown Fixtures — struct-based fixtures with Setup/Teardown for isolated, repeatable test state",
+    30: "Composable Check Navigation — navigator factories `checkReportEntry(i, ...sub)` descend into nested output, delegating assertions to sub-checks",
+    31: "Inline Check Closures — define assertions inline when a check is used once; no factory extraction needed",
+    32: "Interface Extraction from Third-Party Deps — wrap a concrete library behind a small interface, inject through the constructor, swap with testify/mock in tests",
 }
 
 
@@ -66,17 +71,21 @@ def chapter_number(dirname):
 
 
 def find_chapter_dirs():
-    entries = sorted(os.listdir(CHAPTER_DIR))
+    entries = sorted(os.listdir(CHAPTERS_DIR))
     dirs = []
     for e in entries:
-        if os.path.isdir(os.path.join(CHAPTER_DIR, e)):
+        if os.path.isdir(os.path.join(CHAPTERS_DIR, e)):
             n = chapter_number(e)
-            if n and 1 <= n <= 29:
+            if n and 1 <= n <= 32:
                 dirs.append((n, e))
     return dirs
 
 
 def get_section(num):
+    if num in (30, 31):
+        return "closure-check", "Closure-Check", "Extends the closure-check pattern with composable navigator checks that select sub-elements of nested output and delegate assertions to sub-check functions."
+    if num == 32:
+        return "mocking", "Mocking", "Extends the mocking section with interface extraction from third-party dependencies — wrapping a concrete library behind a small interface and swapping it with testify/mock in tests."
     for slug, title, (lo, hi), desc in SECTION_MAP:
         if lo <= num <= hi:
             return slug, title, desc
@@ -153,7 +162,7 @@ def write_chapter_page(out_dir, num, dirname, title, sections):
     if approach:
         parts.extend(["", "## Testing Approach", "", approach])
 
-    parts.extend(["", "---", "", f"[View source code]({GITHUB_REPO}/tree/master/{dirname}/) on GitHub"])
+    parts.extend(["", "---", "", f"[View source code]({GITHUB_REPO}/tree/master/chapters/{dirname}/) on GitHub"])
 
     with open(out_path, "w") as f:
         f.write("\n".join(parts) + "\n")
@@ -161,6 +170,12 @@ def write_chapter_page(out_dir, num, dirname, title, sections):
 
 
 def generate():
+    # Clean slate — orphaned files from previous runs would cause
+    # `mkdocs build --strict` warnings.
+    if os.path.exists(DOCS_OUT):
+        shutil.rmtree(DOCS_OUT)
+    os.makedirs(DOCS_OUT, exist_ok=True)
+
     dirs = find_chapter_dirs()
     if not dirs:
         print("ERROR: no chapter directories found")
@@ -169,7 +184,7 @@ def generate():
     section_pages = {slug: [] for slug, _, _, _ in SECTION_MAP}
 
     for num, dirname in dirs:
-        readme_path = os.path.join(CHAPTER_DIR, dirname, "README.md")
+        readme_path = os.path.join(CHAPTERS_DIR, dirname, "README.md")
         if not os.path.exists(readme_path):
             print(f"WARN: {readme_path} not found")
             continue
@@ -200,7 +215,7 @@ def generate():
 
         lines = [f"# {title}", "", desc, "", "## Chapters"]
         for num, p_slug, one_liner in pages:
-            source = p_slug
+            source = f"chapters/{p_slug}"
             lines.append(f"- [{p_slug}.md]({p_slug}.md) — {one_liner}  \n  Source: `{source}/`")
         lines.extend(["", "## Running the code", "",
                        "Each chapter is a standalone Go module. To run tests for a chapter:",
@@ -217,7 +232,7 @@ def generate():
         content = f.read()
     for num, dirname in dirs:
         section_slug, _, _ = get_section(num)
-        dir_re = os.path.join(dirname, "README.md")
+        dir_re = os.path.join("chapters", dirname, "README.md")
         mkdocs_link = os.path.join(section_slug, f"{dirname}.md")
         content = content.replace(f"]({dir_re})", f"]({mkdocs_link})")
     with open(home_out, "w") as f:

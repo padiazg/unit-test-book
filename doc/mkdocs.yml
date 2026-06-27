@@ -1,5 +1,5 @@
 site_name: Unit Testing in Go
-site_description: 29 testing patterns from real Go projects — practical examples with code, tests, and explanations
+site_description: 30 testing patterns from real Go projects — practical examples with code, tests, and explanations
 site_url: https://padiazg.github.io/unit-test-book
 repo_url: https://github.com/padiazg/unit-test-book
 repo_name: padiazg/unit-test-book
@@ -79,6 +79,8 @@ nav:
     - Check Factory Closures: closure-check/chapter-07-check-factory-closures.md
     - Error Message Verification: closure-check/chapter-08-error-message-verification.md
     - Output String Inspection: closure-check/chapter-09-output-string-inspection.md
+    - Composable Check Navigation: closure-check/chapter-30-composable-check-navigation.md
+    - Inline Check Closures: closure-check/chapter-31-inline-check-closures.md
   - Mocking:
     - mocking/index.md
     - Before Hook Pattern: mocking/chapter-10-before-hook-pattern.md
@@ -87,6 +89,7 @@ nav:
     - testify/mock Interfaces: mocking/chapter-13-testify-mock-interfaces.md
     - Function Variable Injection: mocking/chapter-14-function-variable-injection.md
     - Package-Level Var Swap: mocking/chapter-15-package-level-var-swap.md
+    - Interface Extraction 3rd Party: mocking/chapter-32-interface-extraction-3rd-party.md
   - HTTP / I/O:
     - http-io/index.md
     - httptest.Server: http-io/chapter-16-httptest-server.md
