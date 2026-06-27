@@ -1,7 +1,7 @@
 .PHONY: test lint fmt clean help
 
 test:
-	go test -race -count=1 ./chapter-*/...
+	go test -race -count=1 ./chapters/chapter-*/...
 
 lint:
 	find . -name go.mod -execdir golangci-lint run ./... \;
@@ -11,6 +11,10 @@ fix:
 
 fmt:
 	gofmt -s -w .
+
+docs:
+	python3 doc/generate.py
+	cd doc && mkdocs build --strict
 
 clean:
 	rm -f coverage.out mutation*.json

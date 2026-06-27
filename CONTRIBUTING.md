@@ -20,7 +20,7 @@ Describe the use case before proposing a solution.
 ```bash
 git clone https://github.com/padiazg/unit-test-book.git
 cd unit-test-book
-go test ./chapter-*/...
+go test ./chapters/chapter-*/...
 ```
 
 Requirements: Go 1.26+, golangci-lint.
@@ -29,7 +29,7 @@ Requirements: Go 1.26+, golangci-lint.
 
 1. Fork the repo and create a feature branch from `master`.
 2. Make your changes. Keep commits atomic.
-3. Run `go test ./chapter-*/...` and `golangci-lint run ./...` — both must pass.
+3. Run `go test ./chapters/chapter-*/...` and `golangci-lint run ./...` — both must pass.
 4. Open a PR against `master`. Fill in the PR template.
 5. One approval required before merge.
 
@@ -37,7 +37,7 @@ Requirements: Go 1.26+, golangci-lint.
 
 - Tests: table-driven with `testify/assert`.
 - Commits: conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
-- Each chapter is a standalone Go module under `chapter-XX-name/`.
+- Each chapter is a standalone Go module under `chapters/chapter-XX-name/`.
 
 ## License
 
