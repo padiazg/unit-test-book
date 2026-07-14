@@ -33,4 +33,6 @@ use (
 	./chapters/chapter-30-composable-check-navigation
 	./chapters/chapter-31-inline-check-closures
 	./chapters/chapter-32-interface-extraction-3rd-party
+	./chapters/chapter-33-event-driven-run-loop
+	./chapters/chapter-34-embedded-infrastructure
 )

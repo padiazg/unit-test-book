@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 )
 
 type Event string
@@ -217,4 +218,50 @@ func (r *RunLoop) ProcessMessages(ctx context.Context, msgs []string) []string {
 		results = append(results, res)
 	}
 	return results
+}
+
+// Sensor demonstrates the "Run() returns channel" pattern.
+// Instead of accepting a channel, Run creates one internally
+// and returns it. The test observes from the outside.
+type Sensor struct {
+	transport func(buf []byte) (int, error)
+	interval  time.Duration
+	stop      chan struct{}
+}
+
+func NewSensor(transport func(buf []byte) (int, error), interval time.Duration) *Sensor {
+	return &Sensor{
+		transport: transport,
+		interval:  interval,
+		stop:      make(chan struct{}),
+	}
+}
+
+func (s *Sensor) Run(ctx context.Context) <-chan int {
+	out := make(chan int)
+	go func() {
+		defer close(out)
+		ticker := time.NewTicker(s.interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-s.stop:
+				return
+			case <-ticker.C:
+				buf := make([]byte, 4)
+				n, err := s.transport(buf)
+				if err != nil || n < 2 {
+					continue
+				}
+				out <- int(buf[0])<<8 | int(buf[1])
+			}
+		}
+	}()
+	return out
+}
+
+func (s *Sensor) Stop() {
+	close(s.stop)
 }

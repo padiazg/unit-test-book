@@ -120,3 +120,99 @@ Goroutine run loop tests:
 2. **`<-m.started` synchronizer** — the Merger exposes a `started` channel to signal when internal goroutines have been created. Without it, `m.Wait()` could close output before workers start.
 3. **Cancellation via context** — `Processor.Run(ctx)` checks `ctx.Done()` in the select. Tests cancel the context and verify workers exit via `< -p.Wait()`.
 4. **Buffered channels for tests** — test inputs use buffered channels with small capacities so they don't block. The merger output has exactly enough capacity for all expected values.
+
+### Run() Returns Channel
+
+A variant appears when `Run()` *returns* the channel instead of receiving one. The method creates the channel internally, the caller observes from the outside — common when wrapping hardware or external sources that push events.
+
+**Code:**
+
+```go
+type Sensor struct {
+	transport func(buf []byte) (int, error)
+	interval  time.Duration
+	stop      chan struct{}
+}
+
+func (s *Sensor) Run(ctx context.Context) <-chan int {
+	out := make(chan int)
+	go func() {
+		defer close(out)
+		ticker := time.NewTicker(s.interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-s.stop:
+				return
+			case <-ticker.C:
+				buf := make([]byte, 4)
+				n, err := s.transport(buf)
+				if err != nil || n < 2 {
+					continue
+				}
+				out <- int(buf[0])<<8 | int(buf[1])
+			}
+		}
+	}()
+	return out
+}
+
+func (s *Sensor) Stop() { close(s.stop) }
+```
+
+**Test:**
+
+```go
+func TestSensor_EmitsReadings(t *testing.T) {
+	transport := func(buf []byte) (int, error) {
+		buf[0] = 0x01; buf[1] = 0x90
+		return 2, nil
+	}
+
+	s := NewSensor(transport, time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch := s.Run(ctx)
+
+	var got int
+	select {
+	case v, ok := <-ch:
+		if !ok { t.Fatal("channel closed unexpectedly") }
+		got = v
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timed out waiting for reading")
+	}
+
+	assert.Equal(t, 400, got) // 0x0190
+
+	s.Stop()
+	select {
+	case _, ok := <-ch:
+		if ok { for range ch {} }
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timed out waiting for channel to close")
+	}
+}
+
+func TestSensor_ClosesOnCancel(t *testing.T) {
+	s := NewSensor(func(b []byte) (int, error) { return 0, nil }, time.Hour)
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := s.Run(ctx)
+	cancel()
+	select {
+	case _, ok := <-ch:
+		if ok { t.Fatal("expected channel to close") }
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timed out waiting for channel to close")
+	}
+}
+```
+
+**Key differences from injected-channel run loops:**
+
+1. **External observation** — the test doesn't own the channel. It must `select` with a timeout to capture events, then `select` again to verify cleanup.
+2. **Two-phase shutdown** — first stop the producer (`s.Stop()` or `cancel()`), then verify the channel closes. A `for range` drain after `Stop()` absorbs events sent before the goroutine sees the stop signal.
+3. **Timeout as safety net** — every channel read in the test has a `<-time.After` fallback. Without it, a stuck goroutine hangs the test forever.
+4. **Separate close verification** — the second `select` after shutdown confirms the goroutine exited and the channel closed. This catches goroutine leaks that don't affect output but accumulate in CI.

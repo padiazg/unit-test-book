@@ -74,3 +74,16 @@ The before hook pattern:
 2. **Typed return struct** — `beforeReturns` documents exactly what the test fixture provides. Adding a new dependency (e.g. a clock) doesn't require changing every test's setup, just the struct and the `before` function.
 3. **Explicit over shared** — no `init()` or `TestMain` setup. Every subtest calls `before()` and sees the fixture it depends on. Makes the test self-documenting.
 4. **`t.Helper()`** — the `before` hook calls `t.Helper()`, so failure line numbers point to the test assertion, not inside the setup function.
+
+### Beyond Setup: Before/Checks/After Phases
+
+When tests involve goroutines, mocked dependencies, or explicit teardown, the `before` pattern extends to a three-phase lifecycle:
+
+- **Before** — configure mocks and set up the system under test
+- **Exercise** — call the method being tested
+- **Checks** — assert on captured output
+- **After** — trigger shutdown, cancel context, verify channel cleanup
+
+The tests in Chapter 22 (Sensor) and Chapter 33 (Event-Driven Run Loop) demonstrate this: mock transport expectations are wired in `before()`, the `Run()` channel is observed with `select` + timeout, received values are checked by typed closures, and `after()` calls `s.Stop()` or `cancel()` to tear down the goroutine and verify channel closure.
+
+This structured lifecycle makes it easy to add new test cases: each entry in the table specifies only what differs — mock setup, assertions, and teardown — without repeating the boilerplate of creating contexts, starting goroutines, or draining channels.
