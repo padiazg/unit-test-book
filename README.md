@@ -47,11 +47,15 @@ Each chapter is a **standalone Go module** with production code, tests, and an e
 | 19 | [Temporary Files & Parsing](chapters/chapter-19-temp-files-and-parsing/README.md) | `t.TempDir()` + file ops | go-testgen, go-crap |
 
 ### Section 5: Concurrency
+
+Tests for goroutine lifecycle, channel-based event observation, mock-driven run loops with transport providers, and shutdown verification via context cancellation and stop signals.
+
 | # | Chapter | Pattern | Source |
 |---|---------|---------|--------|
 | 20 | [Channel Delivery Tests](chapters/chapter-20-channel-delivery-tests/README.md) | Buffered channel + select | notifier |
 | 21 | [Panic Recovery in Tests](chapters/chapter-21-panic-recovery/README.md) | `defer recover()` + `wantPanic` | notifier |
-| 22 | [Goroutine Run Loops](chapters/chapter-22-goroutine-run-loops/README.md) | `go n.Run()` + WaitGroup | notifier |
+| 22 | [Goroutine Run Loops](chapters/chapter-22-goroutine-run-loops/README.md) | `go n.Run()` + WaitGroup, `Run()` returns channel | notifier, go-aqi |
+| 33 | [Event-Driven Run Loop Tests](chapters/chapter-33-event-driven-run-loop/README.md) | `before`/`after` hooks, testify.Mock, `select` with timeout | go-aqi/sps30, go-aqi/zh07 |
 
 ### Section 6: Advanced Go Features
 | # | Chapter | Pattern | Source |
@@ -67,6 +71,7 @@ Each chapter is a **standalone Go module** with production code, tests, and an e
 | 27 | [Service Layer with Mocked Ports](chapters/chapter-27-service-layer-mocked-ports/README.md) | `setupService` + `Teardown` | pantry/services |
 | 28 | [JSON Format Verification](chapters/chapter-28-json-format-verification/README.md) | Marshal/unmarshal roundtrip | go-crap/report |
 | 29 | [Setup/Teardown Fixtures](chapters/chapter-29-setup-teardown-fixtures/README.md) | Fixture struct + teardown | pantry/services |
+| 34 | [Embedded Infrastructure Testing](chapters/chapter-34-embedded-infrastructure/README.md) | `miniredis.RunT(t)` + `t.Cleanup` | truco/notifier |
 
 ## How to Use
 
@@ -83,7 +88,7 @@ go test ./chapters/chapter-*/...
 
 | Path | Description |
 |------|-------------|
-| `chapters/chapter-XX-*/` | 31 standalone Go modules with code + tests + README |
+| `chapters/chapter-XX-*/` | 34 standalone Go modules with code + tests + README |
 | `doc/` | MkDocs site (generates the documentation site) |
 | `doc/docs/` | Generated markdown pages (37 files) |
 | `doc/generate.py` | Script that builds mkdocs pages from chapter READMEs |

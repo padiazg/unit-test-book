@@ -22,11 +22,11 @@ SECTION_MAP = [
     ("http-io", "HTTP / I/O", (16, 19),
      "Four patterns for testing HTTP handlers and I/O operations. Uses httptest.Server for integration tests, ResponseRecorder for handler unit tests, error readers for failure paths, and temp files for filesystem tests."),
     ("concurrency", "Concurrency", (20, 22),
-     "Three chapters on goroutine safety and lifecycle. Covers channel-based worker pools, panic recovery with defer/recover, and select-based run loops with context cancellation."),
+     "Chapters on goroutine lifecycle, channel-based event observation, mock-driven run loops with transport providers, and shutdown verification via context cancellation and stop signals."),
     ("advanced-go", "Advanced Go", (23, 26),
      "Four advanced testing topics: goroutine leak detection with goleak, AST-based cyclomatic complexity analysis, benchmark-driven performance comparison, and parallel test safety with -race."),
-    ("integration", "Integration", (27, 29),
-     "Three integration patterns: service-layer port mocking with testify/mock, JSON format verification and round-trip testing, and struct-based fixture setup/teardown for isolated test state."),
+    ("integration", "Integration", (27, 34),
+     "Four integration patterns: service-layer port mocking with testify/mock, JSON format verification and round-trip testing, struct-based fixture setup/teardown for isolated test state, and embedded infrastructure testing with in-memory Redis using miniredis."),
 ]
 
 CHAPTER_ONE_LINERS = {
@@ -62,6 +62,8 @@ CHAPTER_ONE_LINERS = {
     30: "Composable Check Navigation — navigator factories `checkReportEntry(i, ...sub)` descend into nested output, delegating assertions to sub-checks",
     31: "Inline Check Closures — define assertions inline when a check is used once; no factory extraction needed",
     32: "Interface Extraction from Third-Party Deps — wrap a concrete library behind a small interface, inject through the constructor, swap with testify/mock in tests",
+    33: "Event-Driven Run Loop Tests — `Run()` returns an event channel, `before`/`after` lifecycle with testify.Mock, `select`-with-timeout event capture, and two-phase shutdown verification",
+    34: "Embedded Infrastructure Testing — use in-memory replacements like `miniredis.RunT(t)` for realistic protocol coverage without external processes",
 }
 
 
@@ -76,7 +78,7 @@ def find_chapter_dirs():
     for e in entries:
         if os.path.isdir(os.path.join(CHAPTERS_DIR, e)):
             n = chapter_number(e)
-            if n and 1 <= n <= 32:
+            if n and 1 <= n <= 99:
                 dirs.append((n, e))
     return dirs
 
@@ -86,6 +88,10 @@ def get_section(num):
         return "closure-check", "Closure-Check", "Extends the closure-check pattern with composable navigator checks that select sub-elements of nested output and delegate assertions to sub-check functions."
     if num == 32:
         return "mocking", "Mocking", "Extends the mocking section with interface extraction from third-party dependencies — wrapping a concrete library behind a small interface and swapping it with testify/mock in tests."
+    if num == 33:
+        return "concurrency", "Concurrency", "Extends the concurrency section with mock-driven run loops — testing goroutines that return event channels, using testify.Mock for transport providers and select-with-timeout for external channel observation."
+    if num == 34:
+        return "integration", "Integration", "Extends the integration section with embedded infrastructure testing — using miniredis as an in-memory Redis replacement for realistic pub/sub protocol coverage in tests."
     for slug, title, (lo, hi), desc in SECTION_MAP:
         if lo <= num <= hi:
             return slug, title, desc

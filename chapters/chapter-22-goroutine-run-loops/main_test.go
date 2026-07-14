@@ -214,3 +214,82 @@ func TestProcessMessages_Cancellation(t *testing.T) {
 	results := r.ProcessMessages(ctx, []string{"a", "b"})
 	assert.Empty(t, results)
 }
+
+// Sensor tests — "Run() returns channel" pattern
+
+func TestSensor_EmitsReadings(t *testing.T) {
+	transport := func(buf []byte) (int, error) {
+		buf[0] = 0x01
+		buf[1] = 0x90
+		return 2, nil
+	}
+
+	s := NewSensor(transport, time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch := s.Run(ctx)
+
+	var got int
+	select {
+	case v, ok := <-ch:
+		if !ok {
+			t.Fatal("channel closed unexpectedly")
+		}
+		got = v
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timed out waiting for reading")
+	}
+
+	assert.Equal(t, 400, got) // 0x0190 = 400
+
+	s.Stop()
+
+	select {
+	case _, ok := <-ch:
+		if ok {
+			for range ch {
+			}
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timed out waiting for channel to close")
+	}
+}
+
+func TestSensor_ClosesOnContextCancel(t *testing.T) {
+	transport := func(buf []byte) (int, error) {
+		return 0, nil
+	}
+
+	s := NewSensor(transport, time.Hour)
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := s.Run(ctx)
+	cancel()
+
+	select {
+	case _, ok := <-ch:
+		if ok {
+			t.Fatal("expected channel to close")
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timed out waiting for channel to close")
+	}
+}
+
+func TestSensor_ClosesOnStop(t *testing.T) {
+	transport := func(buf []byte) (int, error) {
+		return 0, nil
+	}
+
+	s := NewSensor(transport, time.Hour)
+	ch := s.Run(context.Background())
+	s.Stop()
+
+	select {
+	case _, ok := <-ch:
+		if ok {
+			t.Fatal("expected channel to close")
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("timed out waiting for channel to close")
+	}
+}

@@ -101,6 +101,7 @@ nav:
     - Channel Delivery Tests: concurrency/chapter-20-channel-delivery-tests.md
     - Panic Recovery: concurrency/chapter-21-panic-recovery.md
     - Goroutine Run Loops: concurrency/chapter-22-goroutine-run-loops.md
+    - Event-Driven Run Loop: concurrency/chapter-33-event-driven-run-loop.md
   - Advanced Go:
     - advanced-go/index.md
     - Goroutine Leak Detection: advanced-go/chapter-23-goroutine-leak-detection.md
@@ -112,6 +113,7 @@ nav:
     - Service Layer Mocked Ports: integration/chapter-27-service-layer-mocked-ports.md
     - JSON Format Verification: integration/chapter-28-json-format-verification.md
     - Setup/Teardown Fixtures: integration/chapter-29-setup-teardown-fixtures.md
+    - Embedded Infrastructure: integration/chapter-34-embedded-infrastructure.md
 
 extra:
   social:
