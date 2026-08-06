@@ -2,6 +2,8 @@ package subtest_naming
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -9,81 +11,152 @@ const (
 	orderAmount = 99.50
 )
 
-func TestOrder_Confirm(t *testing.T) {
-	o := NewOrder(orderID_001, orderAmount)
+type checkOrderCancelFn func(*testing.T, *Order, error)
 
-	if err := o.Confirm(); err != nil {
-		t.Errorf("Order.Confirm() unexpected error = %v", err)
-	}
-	if o.Status != StatusConfirmed {
-		t.Errorf("Order.Confirm() status = %s, want %s", o.Status, StatusConfirmed)
-	}
-}
+var checkOrderCancel = func(fns ...checkOrderCancelFn) []checkOrderCancelFn { return fns }
 
-func TestOrder_Confirm_AlreadyConfirmed(t *testing.T) {
-	o := NewOrder(orderID_001, orderAmount)
-	o.Confirm() // move to confirmed
-
-	err := o.Confirm()
-	if err == nil {
-		t.Error("Order.Confirm() expected error for already confirmed order")
+func checkCancelError(want string) checkOrderCancelFn {
+	return func(t *testing.T, s *Order, err error) {
+		t.Helper()
+		if want == "" {
+			assert.NoErrorf(t, err, "checkCancelError: expected no error, got %v", err)
+			return
+		}
+		if assert.Errorf(t, err, "checkCancelError: expected error %q", want) {
+			assert.Containsf(t, err.Error(), want, "checkCancelError mismatch")
+		}
 	}
 }
-
 func TestOrder_Cancel(t *testing.T) {
+	checkCancelled := func(want OrderStatus) checkOrderCancelFn {
+		return func(t *testing.T, o *Order, err error) {
+			t.Helper()
+			assert.Equal(t, want, o.Status)
+		}
+	}
+
 	tests := []struct {
-		name    string
-		setup   func(*Order)
-		wantErr bool
+		name   string
+		checks []checkOrderCancelFn
+		id     string
+		amount float64
+		before func(*Order)
 	}{
 		{
-			name:    orderID_001,
-			setup:   nil, // fresh order, status = pending
-			wantErr: false,
+			name:   orderID_001,
+			checks: checkOrderCancel(checkCancelError(""), checkCancelled(StatusCancelled)),
 		},
 		{
-			name: "already delivered",
-			setup: func(o *Order) {
-				o.Status = StatusDelivered
-			},
-			wantErr: true,
+			name:   "confirm then cancel",
+			id:     "ORD-002",
+			amount: 50.0,
+			before: func(o *Order) { o.Confirm() },
+			checks: checkOrderCancel(checkCancelError(""), checkCancelled(StatusCancelled)),
 		},
 		{
-			name: "already cancelled",
-			setup: func(o *Order) {
-				o.Status = StatusCancelled
-			},
-			wantErr: true,
+			name:   "shipped then cancel",
+			id:     "ORD-003",
+			amount: 200.0,
+			before: func(o *Order) { o.Confirm(); o.Ship() },
+			checks: checkOrderCancel(checkCancelError(""), checkCancelled(StatusCancelled)),
 		},
 		{
-			name: "shipped order",
-			setup: func(o *Order) {
-				o.Status = StatusShipped
-			},
-			wantErr: false,
+			name:   "delivered",
+			id:     "ORD-004",
+			amount: 30.0,
+			before: func(o *Order) { o.Confirm(); o.Ship(); o.Deliver() },
+			checks: checkOrderCancel(checkCancelError("cannot cancel order in status: delivered")),
+		},
+		{
+			name:   "already cancelled",
+			id:     "ORD-005",
+			amount: 75.0,
+			before: func(o *Order) { o.Cancel() },
+			checks: checkOrderCancel(checkCancelError("cannot cancel order in status: cancelled")),
 		},
 	}
-
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			o := NewOrder(orderID_001, orderAmount)
-			if tt.setup != nil {
-				tt.setup(o)
+			s := NewOrder(tt.id, tt.amount)
+			if tt.before != nil {
+				tt.before(s)
 			}
+			err := s.Cancel()
+			for _, c := range tt.checks {
+				c(t, s, err)
+			}
+		})
+	}
+}
 
-			err := o.Cancel()
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("Order.Cancel() expected error")
-				}
-				return
-			}
+type checkOrderConfirmFn func(*testing.T, *Order, error)
 
-			if err != nil {
-				t.Errorf("Order.Cancel() unexpected error = %v", err)
+var checkOrderConfirm = func(fns ...checkOrderConfirmFn) []checkOrderConfirmFn { return fns }
+
+func checkConfirmError(want string) checkOrderConfirmFn {
+	return func(t *testing.T, s *Order, err error) {
+		t.Helper()
+		if want == "" {
+			assert.NoErrorf(t, err, "checkConfirmError: expected no error, got %v", err)
+			return
+		}
+		if assert.Errorf(t, err, "checkConfirmError: expected error %q", want) {
+			assert.Containsf(t, err.Error(), want, "checkConfirmError mismatch")
+		}
+	}
+}
+func TestOrder_Confirm(t *testing.T) {
+	checkConfirmed := func(want OrderStatus) checkOrderConfirmFn {
+		return func(t *testing.T, o *Order, err error) {
+			t.Helper()
+			assert.Equal(t, want, o.Status)
+		}
+	}
+
+	tests := []struct {
+		name   string
+		checks []checkOrderConfirmFn
+		id     string
+		amount float64
+		before func(*Order)
+	}{
+		{
+			name:   orderID_001,
+			checks: checkOrderConfirm(checkConfirmError(""), checkConfirmed(StatusConfirmed)),
+		},
+		{
+			name:   "shipped",
+			id:     "ORD-002",
+			amount: 200.0,
+			before: func(o *Order) { o.Confirm(); o.Ship() },
+			checks: checkOrderConfirm(checkConfirmError("cannot confirm order in status: shipped")),
+		},
+		{
+			name:   "delivered",
+			id:     "ORD-003",
+			amount: 30.0,
+			before: func(o *Order) { o.Confirm(); o.Ship(); o.Deliver() },
+			checks: checkOrderConfirm(checkConfirmError("cannot confirm order in status: delivered")),
+		},
+		{
+			name:   "already cancelled",
+			id:     "ORD-004",
+			amount: 75.0,
+			before: func(o *Order) { o.Cancel() },
+			checks: checkOrderConfirm(checkConfirmError("cannot confirm order in status: cancelled")),
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewOrder(tt.id, tt.amount)
+			if tt.before != nil {
+				tt.before(s)
 			}
-			if o.Status != StatusCancelled {
-				t.Errorf("Order.Cancel() status = %s, want %s", o.Status, StatusCancelled)
+			err := s.Confirm()
+			for _, c := range tt.checks {
+				c(t, s, err)
 			}
 		})
 	}
