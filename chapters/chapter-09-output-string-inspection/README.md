@@ -1,3 +1,7 @@
+---
+section: closure-check
+---
+
 # Chapter 09: Output String Inspection
 
 ## Description

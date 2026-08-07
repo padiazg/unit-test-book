@@ -1,3 +1,7 @@
+---
+section: closure-check
+---
+
 # Chapter 05: Typed Check Functions
 
 ## Description

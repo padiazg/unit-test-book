@@ -1,3 +1,7 @@
+---
+section: closure-check
+---
+
 # Chapter 06: Check Collection Builder
 
 ## Description

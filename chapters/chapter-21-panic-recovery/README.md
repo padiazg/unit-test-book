@@ -1,3 +1,7 @@
+---
+section: concurrency
+---
+
 # Chapter 21: Panic Recovery
 
 ## Description

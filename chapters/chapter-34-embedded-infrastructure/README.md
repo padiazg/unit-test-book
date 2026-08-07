@@ -1,3 +1,7 @@
+---
+section: integration
+---
+
 # Chapter 34: Embedded Infrastructure Testing
 
 ## Description

@@ -1,3 +1,7 @@
+---
+section: mocking
+---
+
 # Chapter 10: Before Hook Pattern
 
 ## Description

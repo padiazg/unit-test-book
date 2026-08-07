@@ -12,6 +12,18 @@ CHAPTER_DIR = PROJECT_ROOT
 CHAPTERS_DIR = os.path.join(PROJECT_ROOT, "chapters")
 GITHUB_REPO = "https://github.com/padiazg/unit-test-book"
 
+FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
+SECTION_KEY_RE = re.compile(r"^section:\s*(.+)$", re.M)
+
+SECTION_FALLBACK = {
+    30: ("closure-check", "Closure-Check", "Extends the closure-check pattern with composable navigator checks that select sub-elements of nested output and delegate assertions to sub-check functions."),
+    31: ("closure-check", "Closure-Check", "Extends the closure-check pattern with composable navigator checks that select sub-elements of nested output and delegate assertions to sub-check functions."),
+    32: ("mocking", "Mocking", "Extends the mocking section with interface extraction from third-party dependencies — wrapping a concrete library behind a small interface and swapping it with testify/mock in tests."),
+    33: ("concurrency", "Concurrency", "Extends the concurrency section with mock-driven run loops — testing goroutines that return event channels, using testify.Mock for transport providers and select-with-timeout for external channel observation."),
+    34: ("integration", "Integration", "Extends the integration section with embedded infrastructure testing — using miniredis as an in-memory Redis replacement for realistic pub/sub protocol coverage in tests."),
+    35: ("http-io", "HTTP / I/O", "Extends the HTTP / I/O section with stdout/stderr capture — swapping the os.Stdout/os.Stderr globals with an os.Pipe() writer to test functions that print directly to the console."),
+}
+
 SECTION_MAP = [
     ("foundations", "Foundations", (1, 4),
      "Four classic table-driven testing patterns. Each chapter builds on the previous, from basic `wantErr` assertions through value inspection and subtest naming conventions."),
@@ -85,20 +97,35 @@ def find_chapter_dirs():
 
 
 def get_section(num):
-    if num in (30, 31):
-        return "closure-check", "Closure-Check", "Extends the closure-check pattern with composable navigator checks that select sub-elements of nested output and delegate assertions to sub-check functions."
-    if num == 32:
-        return "mocking", "Mocking", "Extends the mocking section with interface extraction from third-party dependencies — wrapping a concrete library behind a small interface and swapping it with testify/mock in tests."
-    if num == 33:
-        return "concurrency", "Concurrency", "Extends the concurrency section with mock-driven run loops — testing goroutines that return event channels, using testify.Mock for transport providers and select-with-timeout for external channel observation."
-    if num == 34:
-        return "integration", "Integration", "Extends the integration section with embedded infrastructure testing — using miniredis as an in-memory Redis replacement for realistic pub/sub protocol coverage in tests."
-    if num == 35:
-        return "http-io", "HTTP / I/O", "Extends the HTTP / I/O section with stdout/stderr capture — swapping the os.Stdout/os.Stderr globals with an os.Pipe() writer to test functions that print directly to the console."
     for slug, title, (lo, hi), desc in SECTION_MAP:
         if lo <= num <= hi:
             return slug, title, desc
-    return None, None, None
+    fb = SECTION_FALLBACK.get(num)
+    return fb if fb else (None, None, None)
+
+
+def get_section_from_readme(readme_path, fallback_num):
+    try:
+        with open(readme_path) as f:
+            raw = f.read()
+    except FileNotFoundError:
+        return get_section(fallback_num)
+
+    m = FRONTMATTER_RE.search(raw)
+    if m:
+        fm_text = m.group(1)
+        key_m = SECTION_KEY_RE.search(fm_text)
+        if key_m:
+            slug = key_m.group(1).strip()
+            for fallback_slug, title, (lo, hi), desc in SECTION_MAP:
+                if fallback_slug == slug:
+                    return slug, title, desc
+            for fb_num, fb in SECTION_FALLBACK.items():
+                if fb_num == fallback_num and fb[0] == slug:
+                    return slug, fb[1], fb[2]
+            return slug, slug.title(), f"Section defined in frontmatter for chapter {fallback_num}."
+
+    return get_section(fallback_num)
 
 
 def slug_from_dir(dirname):
@@ -159,6 +186,7 @@ def write_chapter_page(out_dir, num, dirname, title, sections):
     description = strip_realworld(sections.get("Description", ""))
     code = sections.get("Code", "")
     test = sections.get("Test", "")
+    scaffold = sections.get("Scaffold", "")
     approach = sections.get("Testing Approach", "")
 
     parts = [f"# Chapter {num:02d}: {title}"]
@@ -168,6 +196,8 @@ def write_chapter_page(out_dir, num, dirname, title, sections):
         parts.extend(["", "## Code", "", code])
     if test:
         parts.extend(["", "## Test", "", test])
+    if scaffold:
+        parts.extend(["", "## Scaffold", "", scaffold])
     if approach:
         parts.extend(["", "## Testing Approach", "", approach])
 
@@ -203,7 +233,7 @@ def generate():
             print(f"WARN: could not parse title from {readme_path}")
             continue
 
-        section_slug, section_title, section_desc = get_section(num)
+        section_slug, section_title, section_desc = get_section_from_readme(readme_path, num)
         if not section_slug:
             print(f"WARN: no section for chapter {num}")
             continue
@@ -240,7 +270,8 @@ def generate():
     with open(root_readme) as f:
         content = f.read()
     for num, dirname in dirs:
-        section_slug, _, _ = get_section(num)
+        readme_path = os.path.join(CHAPTERS_DIR, dirname, "README.md")
+        section_slug, _, _ = get_section_from_readme(readme_path, num) if os.path.exists(readme_path) else (None, None, None)
         dir_re = os.path.join("chapters", dirname, "README.md")
         mkdocs_link = os.path.join(section_slug, f"{dirname}.md")
         content = content.replace(f"]({dir_re})", f"]({mkdocs_link})")

@@ -1,3 +1,7 @@
+---
+section: advanced-go
+---
+
 # Chapter 24: AST Parsing Complexity
 
 ## Description

@@ -1,3 +1,7 @@
+---
+section: http-io
+---
+
 # Chapter 35: Capturing Stdout/Stderr in Tests
 
 ## Description
@@ -247,6 +251,15 @@ func TestWriteDiagnostics(t *testing.T) {
 		})
 	}
 }
+```
+
+## Scaffold
+
+```shell
+go-testgen report . --format table
+go-testgen gen . PrintTable
+go-testgen gen . ReportErrors
+go-testgen gen . WriteDiagnostics
 ```
 
 ## Testing Approach

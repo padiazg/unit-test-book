@@ -1,3 +1,7 @@
+---
+section: closure-check
+---
+
 # Chapter 07: Check Factory Closures
 
 ## Description

@@ -1,3 +1,7 @@
+---
+section: mocking
+---
+
 # Chapter 13: testify/mock Interfaces
 
 ## Description

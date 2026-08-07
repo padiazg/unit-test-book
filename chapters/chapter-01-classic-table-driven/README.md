@@ -1,3 +1,7 @@
+---
+section: foundations
+---
+
 # Chapter 01: Classic Table-Driven Tests
 
 ## Description

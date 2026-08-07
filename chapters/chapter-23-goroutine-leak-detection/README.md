@@ -1,3 +1,7 @@
+---
+section: advanced-go
+---
+
 # Chapter 23: Goroutine Leak Detection
 
 ## Description

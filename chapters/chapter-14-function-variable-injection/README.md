@@ -1,3 +1,7 @@
+---
+section: mocking
+---
+
 # Chapter 14: Function Variable Injection
 
 ## Description

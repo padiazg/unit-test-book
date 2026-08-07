@@ -1,3 +1,7 @@
+---
+section: concurrency
+---
+
 # Chapter 20: Channel Delivery Tests
 
 ## Description

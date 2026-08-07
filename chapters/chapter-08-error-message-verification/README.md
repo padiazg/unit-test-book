@@ -1,3 +1,7 @@
+---
+section: closure-check
+---
+
 # Chapter 08: Error Message Verification
 
 ## Description

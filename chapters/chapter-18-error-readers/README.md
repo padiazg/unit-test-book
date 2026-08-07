@@ -1,3 +1,7 @@
+---
+section: http-io
+---
+
 # Chapter 18: Error Readers
 
 ## Description

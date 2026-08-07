@@ -1,3 +1,7 @@
+---
+section: closure-check
+---
+
 # Chapter 31: Inline Check Closures
 
 ## Description

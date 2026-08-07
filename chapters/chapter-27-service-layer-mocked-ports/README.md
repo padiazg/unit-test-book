@@ -1,3 +1,7 @@
+---
+section: integration
+---
+
 # Chapter 27: Service Layer Mocked Ports
 
 ## Description

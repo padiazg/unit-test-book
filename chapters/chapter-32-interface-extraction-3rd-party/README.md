@@ -1,3 +1,7 @@
+---
+section: mocking
+---
+
 # Chapter 32: Extracting Interfaces from Third-Party Dependencies
 
 ## Description

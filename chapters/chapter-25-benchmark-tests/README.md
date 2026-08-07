@@ -1,3 +1,7 @@
+---
+section: advanced-go
+---
+
 # Chapter 25: Benchmark Tests
 
 ## Description

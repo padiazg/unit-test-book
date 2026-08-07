@@ -1,3 +1,7 @@
+---
+section: concurrency
+---
+
 # Chapter 22: Goroutine Run Loops
 
 ## Description

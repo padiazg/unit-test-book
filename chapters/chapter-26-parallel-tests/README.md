@@ -1,3 +1,7 @@
+---
+section: advanced-go
+---
+
 # Chapter 26: Parallel Tests
 
 ## Description

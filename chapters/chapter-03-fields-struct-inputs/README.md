@@ -1,3 +1,7 @@
+---
+section: foundations
+---
+
 # Chapter 03: Fields Struct for Inputs
 
 ## Description
@@ -86,6 +90,13 @@ func TestProduct_String(t *testing.T) {
 		})
 	}
 }
+```
+
+## Scaffold
+
+```shell
+go-testgen report . --format table
+go-testgen gen . Product.String --style table
 ```
 
 ## Testing Approach

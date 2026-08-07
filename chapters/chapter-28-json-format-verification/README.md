@@ -1,3 +1,7 @@
+---
+section: integration
+---
+
 # Chapter 28: JSON Format Verification
 
 ## Description

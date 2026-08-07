@@ -1,3 +1,7 @@
+---
+section: integration
+---
+
 # Chapter 29: Setup/Teardown Fixtures
 
 ## Description

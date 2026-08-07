@@ -1,3 +1,7 @@
+---
+section: foundations
+---
+
 # Chapter 02: Value Assertions (`want T`)
 
 ## Description
@@ -71,6 +75,15 @@ func TestParseInt(t *testing.T) {
         })
     }
 }
+```
+
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . ParseInt --style table
 ```
 
 ## Testing Approach

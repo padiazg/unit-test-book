@@ -1,3 +1,7 @@
+---
+section: closure-check
+---
+
 # Chapter 30: Composable Check Navigation for Nested Output
 
 ## Description
