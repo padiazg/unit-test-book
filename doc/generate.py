@@ -64,6 +64,7 @@ CHAPTER_ONE_LINERS = {
     32: "Interface Extraction from Third-Party Deps — wrap a concrete library behind a small interface, inject through the constructor, swap with testify/mock in tests",
     33: "Event-Driven Run Loop Tests — `Run()` returns an event channel, `before`/`after` lifecycle with testify.Mock, `select`-with-timeout event capture, and two-phase shutdown verification",
     34: "Embedded Infrastructure Testing — use in-memory replacements like `miniredis.RunT(t)` for realistic protocol coverage without external processes",
+    35: "Capturing Stdout/Stderr — swap `os.Stdout`/`os.Stderr` with an `os.Pipe()` writer to test functions that print directly to the console",
 }
 
 
@@ -92,6 +93,8 @@ def get_section(num):
         return "concurrency", "Concurrency", "Extends the concurrency section with mock-driven run loops — testing goroutines that return event channels, using testify.Mock for transport providers and select-with-timeout for external channel observation."
     if num == 34:
         return "integration", "Integration", "Extends the integration section with embedded infrastructure testing — using miniredis as an in-memory Redis replacement for realistic pub/sub protocol coverage in tests."
+    if num == 35:
+        return "http-io", "HTTP / I/O", "Extends the HTTP / I/O section with stdout/stderr capture — swapping the os.Stdout/os.Stderr globals with an os.Pipe() writer to test functions that print directly to the console."
     for slug, title, (lo, hi), desc in SECTION_MAP:
         if lo <= num <= hi:
             return slug, title, desc
