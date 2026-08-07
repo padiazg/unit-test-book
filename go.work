@@ -35,4 +35,5 @@ use (
 	./chapters/chapter-32-interface-extraction-3rd-party
 	./chapters/chapter-33-event-driven-run-loop
 	./chapters/chapter-34-embedded-infrastructure
+	./chapters/chapter-35-capturing-stdout-stderr
 )
