@@ -1,97 +1,128 @@
-# Chapter 01: Classic Table-Driven Tests (`wantErr bool`)
+# Chapter 01: Classic Table-Driven Tests
 
 ## Description
 
-The most common Go testing pattern: a constructor that returns `(T, error)` is tested by enumerating valid and invalid inputs. Each test case has a `wantErr bool` that drives a branch: on expected errors, assert error presence and nil result; on success, assert no error and non-nil result with correct field values.
+A method that iterates a slice and checks each element against a threshold is tested by enumerating empty lists, all-below, at-boundary, one-exceeding, all-above, and single-entry cases. Each case uses a struct with `name`, `entries`, `threshold`, and `want bool` to drive a `t.Run` subtest.
 
-Real-world examples:  
+Real-world example:
 
-- `pantry/internal/core/domain/product_test.go:13` — `TestNewProduct`  
-- `pantry/internal/core/domain/category_test.go:11` — `TestNewCategory`  
-- `hexago/pkg/version/version_test.go:15` — `TestVersionParseVersion`  
+- `go-crap/internal/scan/entries_test.go:438` — `TestEntries_ThresholdExceeded`  
 
 ## Code
 
 ```go
 package classic_table_driven
 
-import (
-    "errors"
-    "strings"
-)
-
-type Person struct {
-    Name  string
-    Email string
-    Age   int
+// CRAPEntry represents a function with its computed CRAP score.
+type CRAPEntry struct {
+    FuncName      string
+    EffectiveCRAP float64
 }
 
-func NewPerson(name, email string, age int) (*Person, error) {
-    name = strings.TrimSpace(name)
-    email = strings.TrimSpace(email)
+// Entries wraps a list of CRAP entries.
+type Entries struct {
+    List []CRAPEntry
+}
 
-    if name == "" {
-        return nil, errors.New("name is required")
+// ThresholdExceeded returns true if any entry exceeds the given threshold.
+func (e *Entries) ThresholdExceeded(threshold float64) bool {
+    for _, entry := range e.List {
+        if entry.EffectiveCRAP > threshold {
+            return true
+        }
     }
-    if email == "" || !strings.Contains(email, "@") {
-        return nil, errors.New("valid email is required")
-    }
-    if age < 0 || age > 150 {
-        return nil, errors.New("age must be between 0 and 150")
-    }
-
-    return &Person{Name: name, Email: email, Age: age}, nil
+    return false
 }
 ```
 
 ## Test
 
 ```go
-func TestNewPerson(t *testing.T) {
+func TestEntries_ThresholdExceeded(t *testing.T) {
+    const fn = "ThresholdExceeded"
     tests := []struct {
-        name    string
-        person  string
-        email   string
-        age     int
-        wantErr bool
+        name      string
+        entries   *Entries
+        threshold float64
+        want      bool
     }{
-        {name: "valid person", person: "Alice", email: "alice@example.com", age: 30, wantErr: false},
-        {name: "empty name", person: "", email: "bob@example.com", age: 25, wantErr: true},
-        {name: "whitespace name", person: "  ", email: "bob@example.com", age: 25, wantErr: true},
-        {name: "missing email", person: "Bob", email: "", age: 25, wantErr: true},
-        {name: "invalid email format", person: "Bob", email: "not-an-email", age: 25, wantErr: true},
-        {name: "negative age", person: "Charlie", email: "charlie@example.com", age: -1, wantErr: true},
-        {name: "age too high", person: "Diana", email: "diana@example.com", age: 200, wantErr: true},
-        {name: "age zero", person: "Eve", email: "eve@example.com", age: 0, wantErr: false},
+        {
+            name:      "empty_list_returns_false",
+            entries:   &Entries{List: []CRAPEntry{}},
+            threshold: 100.0,
+            want:      false,
+        },
+        {
+            name: "all_below_threshold",
+            entries: &Entries{List: []CRAPEntry{
+                {FuncName: "a", EffectiveCRAP: 50},
+                {FuncName: "b", EffectiveCRAP: 30},
+            }},
+            threshold: 100.0,
+            want:      false,
+        },
+        {
+            name: "all_at_threshold_not_exceeded",
+            entries: &Entries{List: []CRAPEntry{
+                {FuncName: "exact", EffectiveCRAP: 100},
+            }},
+            threshold: 100.0,
+            want:      false,
+        },
+        {
+            name: "one_entry_exceeding_threshold",
+            entries: &Entries{List: []CRAPEntry{
+                {FuncName: "low", EffectiveCRAP: 30},
+                {FuncName: "high", EffectiveCRAP: 200},
+            }},
+            threshold: 100.0,
+            want:      true,
+        },
+        {
+            name: "all_above_threshold",
+            entries: &Entries{List: []CRAPEntry{
+                {FuncName: "a", EffectiveCRAP: 200},
+                {FuncName: "b", EffectiveCRAP: 150},
+            }},
+            threshold: 100.0,
+            want:      true,
+        },
+        {
+            name: "single_entry_below_threshold",
+            entries: &Entries{List: []CRAPEntry{
+                {FuncName: "single", EffectiveCRAP: 50},
+            }},
+            threshold: 100.0,
+            want:      false,
+        },
     }
-
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            p, err := NewPerson(tt.person, tt.email, tt.age)
-
-            if tt.wantErr {
-                require.Error(t, err)
-                assert.Nil(t, p)
-                return
-            }
-
-            require.NoError(t, err)
-            assert.NotNil(t, p)
-            assert.Equal(t, tt.person, p.Name)
-            assert.Equal(t, tt.email, p.Email)
-            assert.Equal(t, tt.age, p.Age)
+            got := tt.entries.ThresholdExceeded(tt.threshold)
+            assert.Equal(t, tt.want, got, "%s: %s", fn, tt.name)
         })
     }
 }
 ```
 
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . Entries.ThresholdExceeded
+```
+
 ## Testing Approach
 
-The `wantErr bool` pattern works as follows:
+The table-driven `ThresholdExceeded` test covers:
 
-1. **Happy path branch** — when `wantErr` is `false`, assert no error (`require.NoError`) then validate the returned value with `assert.Equal` for each field. Using `require` for the error check ensures the test stops immediately if the value is nil.
-2. **Error path branch** — when `wantErr` is `true`, assert error presence (`require.Error`) and nil value (`assert.Nil`). The `return` after the check prevents further nil-pointer panics.
-3. **Boundary cases** — include edge values (zero, empty string, boundary max) to verify validation logic. The `age: 0` case confirms zero is valid; `age: -1` and `age: 200` confirm the boundary rejection.
-4. **Whitespace handling** — testing `"  "` as input verifies that trimming happens before validation.
+1. **Empty list** — `&Entries{List: []CRAPEntry{}}` should return `false`; no entries means nothing can exceed the threshold.
+2. **All below** — when every entry's `EffectiveCRAP` is strictly less than the threshold, the result is `false`.
+3. **At boundary** — `EffectiveCRAP == threshold` is NOT exceeded (the check uses `>`, not `>=`). This is a critical boundary case.
+4. **One exceeding** — only one entry above the threshold among several below; the method should short-circuit and return `true`.
+5. **All above** — every entry exceeds the threshold; confirms the method works when all values pass.
+6. **Single entry** — a list with one item below threshold; verifies the loop runs at least once and returns `false` correctly.
 
-This pattern is preferred over separate test functions per case because it makes adding new cases trivial (one struct entry) and visually groups all scenarios in one place.
+The `const fn = "ThresholdExceeded"` plus `%s: %s` format in `assert.Equal` makes test failure output self-documenting: `ThresholdExceeded: all_at_threshold_not_exceeded`.

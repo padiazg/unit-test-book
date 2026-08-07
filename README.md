@@ -45,6 +45,7 @@ Each chapter is a **standalone Go module** with production code, tests, and an e
 | 17 | [httptest.ResponseRecorder](chapters/chapter-17-httptest-response-recorder/README.md) | Handler unit tests | pantry/http |
 | 18 | [Error Readers](chapters/chapter-18-error-readers/README.md) | `errorReader` for IO errors | notes |
 | 19 | [Temporary Files & Parsing](chapters/chapter-19-temp-files-and-parsing/README.md) | `t.TempDir()` + file ops | go-testgen, go-crap |
+| 35 | [Stdout/Stderr Capture](chapters/chapter-35-capturing-stdout-stderr/README.md) | `os.Pipe()` + swap `os.Stdout` | hackerrank, go-crap |
 
 ### Section 5: Concurrency
 
@@ -88,7 +89,7 @@ go test ./chapters/chapter-*/...
 
 | Path | Description |
 |------|-------------|
-| `chapters/chapter-XX-*/` | 34 standalone Go modules with code + tests + README |
+| `chapters/chapter-XX-*/` | 35 standalone Go modules with code + tests + README |
 | `doc/` | MkDocs site (generates the documentation site) |
 | `doc/docs/` | Generated markdown pages (37 files) |
 | `doc/generate.py` | Script that builds mkdocs pages from chapter READMEs |
@@ -101,6 +102,44 @@ cd doc
 pip install mkdocs-material pymdown-extensions
 mkdocs serve
 ```
+
+## AI Skills
+
+Skills in `go-testgen/skills/` are auto-generated from these chapters. Each skill describes a testing pattern, maps it to a `go-testgen` style (`table`, `check`, `simple`, `manual`), and includes the Code/Test blocks from the chapter README.
+
+### Generate skills
+
+```bash
+make skills                    # generate stubs + router + manifests
+make skills-validate           # validate all gates pass
+python3 doc/generate_skill_bodies.py  # fill each skill body from READMEs
+```
+
+### Skill pipeline
+
+```
+chapters/chapter-NN-slug/README.md   ← source (chapter description, code, test)
+doc/skills-manifest.yaml             ← routing table (style, scenario, route_keys)
+doc/generate_skills.py               ← generates stubs, router, plugin manifests, skills.sh
+doc/generate_skill_bodies.py         ← fills skill bodies from chapter READMEs
+go-testgen/skills/pattern-NN-slug/   ← generated skill (copied to ../go-testgen/skills/)
+```
+
+Each generated skill has:
+
+- **When to use** — paraphrased from the chapter Description
+- **go-testgen style** — `table` | `check` | `simple` | `manual`
+- **Pattern** — Code block + Test block from the README
+- **Fill the cases** — Testing Approach as bullet points
+- **Cross-references** — link back to the chapter
+
+The manifest (`doc/skills-manifest.yaml`) also controls:
+- `style` — determines go-testgen scaffolding behavior
+- `demand_style: true` — missing rows cause build errors
+- `require_route_keys: true` — each chapter must have routing keys
+- `version` — synced across plugin manifests (`.claude-plugin/`, `.cursor-plugin/`, `gemini-extension.json`)
+
+For the full maintenance workflow, see [MAINTAIN-SKILLS.md](MAINTAIN-SKILLS.md).
 
 ## Real-World Sources
 

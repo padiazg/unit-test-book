@@ -14,14 +14,14 @@ Real-world examples:
 
 ```go
 func ParseEmail(raw string) (*EmailAddress, error) {
-	// validates email format, returns specific error messages:
-	// - "email address is empty"
-	// - "must contain exactly one @ symbol"
-	// - "empty local part"
-	// - "empty domain"
-	// - "exceeds 64 characters"
-	// - "must contain a dot"
-	// - "contains invalid characters"
+    // validates email format, returns specific error messages:
+    // - "email address is empty"
+    // - "must contain exactly one @ symbol"
+    // - "empty local part"
+    // - "empty domain"
+    // - "exceeds 64 characters"
+    // - "must contain a dot"
+    // - "contains invalid characters"
 }
 ```
 
@@ -33,44 +33,53 @@ type checkParseEmailFn func(*testing.T, *EmailAddress, error)
 var checkParseEmail = func(fns ...checkParseEmailFn) []checkParseEmailFn { return fns }
 
 func TestParseEmail(t *testing.T) {
-	checkError := func(want string) checkParseEmailFn {
-		return func(t *testing.T, e *EmailAddress, err error) {
-			t.Helper()
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), want)
-			assert.Nil(t, e)
-		}
-	}
+    checkError := func(want string) checkParseEmailFn {
+        return func(t *testing.T, e *EmailAddress, err error) {
+            t.Helper()
+            require.Error(t, err)
+            assert.Contains(t, err.Error(), want)
+            assert.Nil(t, e)
+        }
+    }
 
-	tests := []struct {
-		name   string
-		input  string
-		checks []checkParseEmailFn
-	}{
-		{
-			name:  "empty input",
-			input: "",
-			checks: checkParseEmail(
-				checkError("email address is empty"),
-			),
-		},
-		{
-			name:  "missing @ symbol",
-			input: "notanemail",
-			checks: checkParseEmail(
-				checkError("must contain exactly one @"),
-			),
-		},
-		{
-			name:  "domain without dot",
-			input: "user@example",
-			checks: checkParseEmail(
-				checkError("must contain a dot"),
-			),
-		},
-		// ... 7+ error cases each with distinct message
-	}
+    tests := []struct {
+        name   string
+        input  string
+        checks []checkParseEmailFn
+    }{
+        {
+            name:  "empty input",
+            input: "",
+            checks: checkParseEmail(
+                checkError("email address is empty"),
+            ),
+        },
+        {
+            name:  "missing @ symbol",
+            input: "notanemail",
+            checks: checkParseEmail(
+                checkError("must contain exactly one @"),
+            ),
+        },
+        {
+            name:  "domain without dot",
+            input: "user@example",
+            checks: checkParseEmail(
+                checkError("must contain a dot"),
+            ),
+        },
+        // ... 7+ error cases each with distinct message
+    }
 }
+```
+
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . ParseEmail
 ```
 
 ## Testing Approach

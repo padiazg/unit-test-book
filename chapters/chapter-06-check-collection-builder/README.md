@@ -14,13 +14,13 @@ Real-world examples:
 
 ```go
 type ValidationReport struct {
-	Valid    bool
-	Errors   []string
-	Warnings []string
+    Valid    bool
+    Errors   []string
+    Warnings []string
 }
 
 func ValidateDocument(doc *Document) *ValidationReport {
-	// validates document, returns report with errors/warnings
+    // validates document, returns report with errors/warnings
 }
 ```
 
@@ -32,44 +32,53 @@ type checkValidateFn func(*testing.T, *ValidationReport)
 var checkValidate = func(fns ...checkValidateFn) []checkValidateFn { return fns }
 
 func TestValidateDocument(t *testing.T) {
-	checkValid := func(want bool) checkValidateFn {
-		return func(t *testing.T, r *ValidationReport) {
-			t.Helper()
-			assert.Equal(t, want, r.Valid)
-		}
-	}
+    checkValid := func(want bool) checkValidateFn {
+        return func(t *testing.T, r *ValidationReport) {
+            t.Helper()
+            assert.Equal(t, want, r.Valid)
+        }
+    }
 
-	checkErrorCount := func(want int) checkValidateFn {
-		return func(t *testing.T, r *ValidationReport) {
-			t.Helper()
-			assert.Len(t, r.Errors, want)
-		}
-	}
+    checkErrorCount := func(want int) checkValidateFn {
+        return func(t *testing.T, r *ValidationReport) {
+            t.Helper()
+            assert.Len(t, r.Errors, want)
+        }
+    }
 
-	tests := []struct {
-		name   string
-		doc    *Document
-		checks []checkValidateFn
-	}{
-		{
-			name: "valid document",
-			doc:  &Document{Title: "Go Tips", Content: "Use interfaces to decouple code."},
-			checks: checkValidate(        // <--- builder call, no [] type wrapper
-				checkValid(true),
-				checkErrorCount(0),
-			),
-		},
-		{
-			name: "missing title",
-			doc:  &Document{Title: "", Content: "Some content here."},
-			checks: checkValidate(
-				checkValid(false),
-				checkErrorCount(1),
-			),
-		},
-	}
-	// ...
+    tests := []struct {
+        name   string
+        doc    *Document
+        checks []checkValidateFn
+    }{
+        {
+            name: "valid document",
+            doc:  &Document{Title: "Go Tips", Content: "Use interfaces to decouple code."},
+            checks: checkValidate(        // <--- builder call, no [] type wrapper
+                checkValid(true),
+                checkErrorCount(0),
+            ),
+        },
+        {
+            name: "missing title",
+            doc:  &Document{Title: "", Content: "Some content here."},
+            checks: checkValidate(
+                checkValid(false),
+                checkErrorCount(1),
+            ),
+        },
+    }
+    // ...
 }
+```
+
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . ValidateDocument
 ```
 
 ## Testing Approach

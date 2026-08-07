@@ -96,6 +96,7 @@ nav:
     - httptest.ResponseRecorder: http-io/chapter-17-httptest-response-recorder.md
     - Error Readers: http-io/chapter-18-error-readers.md
     - Temp Files & Parsing: http-io/chapter-19-temp-files-and-parsing.md
+    - Stdout/Stderr Capture: http-io/chapter-35-capturing-stdout-stderr.md
   - Concurrency:
     - concurrency/index.md
     - Channel Delivery Tests: concurrency/chapter-20-channel-delivery-tests.md

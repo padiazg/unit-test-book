@@ -234,7 +234,7 @@ func TestOrder_Confirm(t *testing.T) {
 
 Generate test scaffolding with go-testgen:
 
-```
+```shell
 go-testgen report . --format table
 go-testgen gen . Order.Cancel
 go-testgen gen . Order.Confirm

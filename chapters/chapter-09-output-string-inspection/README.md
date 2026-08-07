@@ -15,20 +15,20 @@ Real-world examples:
 
 ```go
 type ReportRow struct {
-	Label string
-	Unit  string
-	Value int
+    Label string
+    Unit  string
+    Value int
 }
 
 func FormatTable(rows []ReportRow) string {
-	// produces formatted table:
-	// LABEL       | VALUE | UNIT
-	// ------------+-------+------
-	// CPU         |    45 | %
+    // produces formatted table:
+    // LABEL       | VALUE | UNIT
+    // ------------+-------+------
+    // CPU         |    45 | %
 }
 
 func FormatCSV(rows []ReportRow) string {
-	// produces CSV: CPU,45,%
+    // produces CSV: CPU,45,%
 }
 ```
 
@@ -40,81 +40,91 @@ type checkFormatTableFn func(*testing.T, string)
 var checkFormatTable = func(fns ...checkFormatTableFn) []checkFormatTableFn { return fns }
 
 func TestFormatTable(t *testing.T) {
-	checkContains := func(want string) checkFormatTableFn {
-		return func(t *testing.T, got string) {
-			t.Helper()
-			assert.Contains(t, got, want)
-		}
-	}
+    checkContains := func(want string) checkFormatTableFn {
+        return func(t *testing.T, got string) {
+            t.Helper()
+            assert.Contains(t, got, want)
+        }
+    }
 
-	checkNotContains := func(want string) checkFormatTableFn {
-		return func(t *testing.T, got string) {
-			t.Helper()
-			assert.NotContains(t, got, want)
-		}
-	}
+    checkNotContains := func(want string) checkFormatTableFn {
+        return func(t *testing.T, got string) {
+            t.Helper()
+            assert.NotContains(t, got, want)
+        }
+    }
 
-	tests := []struct {
-		name   string
-		rows   []ReportRow
-		checks []checkFormatTableFn
-	}{
-		{
-			name:   "empty rows",
-			rows:   nil,
-			checks: checkFormatTable(
-				checkContains("(empty)"),
-				checkNotContains("LABEL"),   // header not printed for empty
-			),
-		},
-		{
-			name: "single row",
-			rows: []ReportRow{{Label: "CPU", Value: 45, Unit: "%"}},
-			checks: checkFormatTable(
-				checkContains("CPU"),
-				checkContains("45"),
-				checkContains("%"),
-				checkContains("LABEL"),
-				checkNotContains("MEM"),
-			),
-		},
-		{
-			name: "multiple rows",
-			rows: []ReportRow{
-				{Label: "CPU", Value: 45, Unit: "%"},
-				{Label: "MEM", Value: 2048, Unit: "MB"},
-			},
-			checks: checkFormatTable(
-				checkContains("CPU"),
-				checkContains("MEM"),
-				checkContains("45"),
-				checkContains("2048"),
-			),
-		},
-	}
+    tests := []struct {
+        name   string
+        rows   []ReportRow
+        checks []checkFormatTableFn
+    }{
+        {
+            name:   "empty rows",
+            rows:   nil,
+            checks: checkFormatTable(
+                checkContains("(empty)"),
+                checkNotContains("LABEL"),   // header not printed for empty
+            ),
+        },
+        {
+            name: "single row",
+            rows: []ReportRow{{Label: "CPU", Value: 45, Unit: "%"}},
+            checks: checkFormatTable(
+                checkContains("CPU"),
+                checkContains("45"),
+                checkContains("%"),
+                checkContains("LABEL"),
+                checkNotContains("MEM"),
+            ),
+        },
+        {
+            name: "multiple rows",
+            rows: []ReportRow{
+                {Label: "CPU", Value: 45, Unit: "%"},
+                {Label: "MEM", Value: 2048, Unit: "MB"},
+            },
+            checks: checkFormatTable(
+                checkContains("CPU"),
+                checkContains("MEM"),
+                checkContains("45"),
+                checkContains("2048"),
+            ),
+        },
+    }
 }
 
 func TestFormatCSV(t *testing.T) {
-	// CSV uses exact matching (want string)
-	tests := []struct {
-		name string
-		rows []ReportRow
-		want string
-	}{
-		{name: "empty", rows: nil, want: ""},
-		{name: "single", rows: []ReportRow{{Label: "CPU", Value: 45, Unit: "%"}}, want: "CPU,45,%\n"},
-		{name: "multiple", rows: []ReportRow{
-			{Label: "CPU", Value: 45, Unit: "%"},
-			{Label: "MEM", Value: 2048, Unit: "MB"},
-		}, want: "CPU,45,%\nMEM,2048,MB\n"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := FormatCSV(tt.rows)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+    // CSV uses exact matching (want string)
+    tests := []struct {
+        name string
+        rows []ReportRow
+        want string
+    }{
+        {name: "empty", rows: nil, want: ""},
+        {name: "single", rows: []ReportRow{{Label: "CPU", Value: 45, Unit: "%"}}, want: "CPU,45,%\n"},
+        {name: "multiple", rows: []ReportRow{
+            {Label: "CPU", Value: 45, Unit: "%"},
+            {Label: "MEM", Value: 2048, Unit: "MB"},
+        }, want: "CPU,45,%\nMEM,2048,MB\n"},
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            got := FormatCSV(tt.rows)
+            assert.Equal(t, tt.want, got)
+        })
+    }
 }
+```
+
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . FormatTable
+go-testgen gen . FormatCSV --style table
 ```
 
 ## Testing Approach

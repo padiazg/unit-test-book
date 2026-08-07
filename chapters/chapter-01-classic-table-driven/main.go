@@ -1,29 +1,22 @@
 package classic_table_driven
 
-import (
-	"errors"
-	"strings"
-)
-
-type Person struct {
-	Name  string
-	Email string
-	Age   int
+// CRAPEntry represents a function with its computed CRAP score.
+type CRAPEntry struct {
+	FuncName      string
+	EffectiveCRAP float64
 }
 
-func NewPerson(name, email string, age int) (*Person, error) {
-	name = strings.TrimSpace(name)
-	email = strings.TrimSpace(email)
+// Entries wraps a list of CRAP entries.
+type Entries struct {
+	List []CRAPEntry
+}
 
-	if name == "" {
-		return nil, errors.New("name is required")
+// ThresholdExceeded returns true if any entry exceeds the given threshold.
+func (e *Entries) ThresholdExceeded(threshold float64) bool {
+	for _, entry := range e.List {
+		if entry.EffectiveCRAP > threshold {
+			return true
+		}
 	}
-	if email == "" || !strings.Contains(email, "@") {
-		return nil, errors.New("valid email is required")
-	}
-	if age < 0 || age > 150 {
-		return nil, errors.New("age must be between 0 and 150")
-	}
-
-	return &Person{Name: name, Email: email, Age: age}, nil
+	return false
 }

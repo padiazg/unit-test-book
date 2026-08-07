@@ -4,90 +4,70 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestNewPerson(t *testing.T) {
+func TestEntries_ThresholdExceeded(t *testing.T) {
+	const fn = "ThresholdExceeded"
 	tests := []struct {
-		name    string
-		person  string
-		email   string
-		age     int
-		wantErr bool
+		name      string
+		entries   *Entries
+		threshold float64
+		want      bool
 	}{
 		{
-			name:    "valid person",
-			person:  "Alice",
-			email:   "alice@example.com",
-			age:     30,
-			wantErr: false,
+			name:      "empty_list_returns_false",
+			entries:   &Entries{List: []CRAPEntry{}},
+			threshold: 100.0,
+			want:      false,
 		},
 		{
-			name:    "empty name",
-			person:  "",
-			email:   "bob@example.com",
-			age:     25,
-			wantErr: true,
+			name: "all_below_threshold",
+			entries: &Entries{List: []CRAPEntry{
+				{FuncName: "a", EffectiveCRAP: 50},
+				{FuncName: "b", EffectiveCRAP: 30},
+			}},
+			threshold: 100.0,
+			want:      false,
 		},
 		{
-			name:    "whitespace name",
-			person:  "  ",
-			email:   "bob@example.com",
-			age:     25,
-			wantErr: true,
+			name: "all_at_threshold_not_exceeded",
+			entries: &Entries{List: []CRAPEntry{
+				{FuncName: "exact", EffectiveCRAP: 100},
+			}},
+			threshold: 100.0,
+			want:      false,
 		},
 		{
-			name:    "missing email",
-			person:  "Bob",
-			email:   "",
-			age:     25,
-			wantErr: true,
+			name: "one_entry_exceeding_threshold",
+			entries: &Entries{List: []CRAPEntry{
+				{FuncName: "low", EffectiveCRAP: 30},
+				{FuncName: "high", EffectiveCRAP: 200},
+			}},
+			threshold: 100.0,
+			want:      true,
 		},
 		{
-			name:    "invalid email format",
-			person:  "Bob",
-			email:   "not-an-email",
-			age:     25,
-			wantErr: true,
+			name: "all_above_threshold",
+			entries: &Entries{List: []CRAPEntry{
+				{FuncName: "a", EffectiveCRAP: 200},
+				{FuncName: "b", EffectiveCRAP: 150},
+			}},
+			threshold: 100.0,
+			want:      true,
 		},
 		{
-			name:    "negative age",
-			person:  "Charlie",
-			email:   "charlie@example.com",
-			age:     -1,
-			wantErr: true,
-		},
-		{
-			name:    "age too high",
-			person:  "Diana",
-			email:   "diana@example.com",
-			age:     200,
-			wantErr: true,
-		},
-		{
-			name:    "age zero",
-			person:  "Eve",
-			email:   "eve@example.com",
-			age:     0,
-			wantErr: false,
+			name: "single_entry_below_threshold",
+			entries: &Entries{List: []CRAPEntry{
+				{FuncName: "single", EffectiveCRAP: 50},
+			}},
+			threshold: 100.0,
+			want:      false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewPerson(tt.person, tt.email, tt.age)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				assert.Nil(t, p)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.NotNil(t, p)
-			assert.Equal(t, tt.person, p.Name)
-			assert.Equal(t, tt.email, p.Email)
-			assert.Equal(t, tt.age, p.Age)
+			got := tt.entries.ThresholdExceeded(tt.threshold)
+			assert.Equal(t, tt.want, got, "%s: %s", fn, tt.name)
 		})
 	}
 }

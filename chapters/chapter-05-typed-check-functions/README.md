@@ -14,14 +14,14 @@ Real-world examples:
 
 ```go
 type TransferResult struct {
-	From *Account
-	To   *Account
-	Fee  float64
+    From *Account
+    To   *Account
+    Fee  float64
 }
 
 func Transfer(from, to *Account, amount float64) (*TransferResult, error) {
-	// validates accounts, applies fee for checking accounts,
-	// updates balances
+    // validates accounts, applies fee for checking accounts,
+    // updates balances
 }
 ```
 
@@ -31,61 +31,70 @@ func Transfer(from, to *Account, amount float64) (*TransferResult, error) {
 type checkTransferFn func(*testing.T, *TransferResult, error)
 
 func TestTransfer(t *testing.T) {
-	checkSuccess := func(t *testing.T, r *TransferResult, err error) {
-		t.Helper()
-		assert.NoError(t, err)
-		assert.NotNil(t, r)
-	}
+    checkSuccess := func(t *testing.T, r *TransferResult, err error) {
+        t.Helper()
+        assert.NoError(t, err)
+        assert.NotNil(t, r)
+    }
 
-	checkError := func(want string) checkTransferFn {
-		return func(t *testing.T, r *TransferResult, err error) {
-			t.Helper()
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), want)
-			assert.Nil(t, r)
-		}
-	}
+    checkError := func(want string) checkTransferFn {
+        return func(t *testing.T, r *TransferResult, err error) {
+            t.Helper()
+            assert.Error(t, err)
+            assert.Contains(t, err.Error(), want)
+            assert.Nil(t, r)
+        }
+    }
 
-	checkFromBalance := func(want float64) checkTransferFn {
-		return func(t *testing.T, r *TransferResult, err error) {
-			t.Helper()
-			assert.NoError(t, err)
-			assert.Equal(t, want, r.From.Balance)
-		}
-	}
+    checkFromBalance := func(want float64) checkTransferFn {
+        return func(t *testing.T, r *TransferResult, err error) {
+            t.Helper()
+            assert.NoError(t, err)
+            assert.Equal(t, want, r.From.Balance)
+        }
+    }
 
-	// Test cases use []checkTransferFn to compose assertions
-	tests := []struct {
-		name   string
-		from   *Account
-		to     *Account
-		amount float64
-		checks []checkTransferFn  // <--- slice of check functions
-	}{
-		{
-			name:   "successful transfer",
-			from:   &Account{Balance: 1000},
-			to:     &Account{Balance: 500},
-			amount: 200,
-			checks: []checkTransferFn{
-				checkSuccess,
-				checkFromBalance(800),
-				checkToBalance(700),
-				checkFee(0),
-			},
-		},
-		// ...
-	}
+    // Test cases use []checkTransferFn to compose assertions
+    tests := []struct {
+        name   string
+        from   *Account
+        to     *Account
+        amount float64
+        checks []checkTransferFn  // <--- slice of check functions
+    }{
+        {
+            name:   "successful transfer",
+            from:   &Account{Balance: 1000},
+            to:     &Account{Balance: 500},
+            amount: 200,
+            checks: []checkTransferFn{
+                checkSuccess,
+                checkFromBalance(800),
+                checkToBalance(700),
+                checkFee(0),
+            },
+        },
+        // ...
+    }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r, err := Transfer(tt.from, tt.to, tt.amount)
-			for _, c := range tt.checks {
-				c(t, r, err)   // each check gets (t, result, error)
-			}
-		})
-	}
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            r, err := Transfer(tt.from, tt.to, tt.amount)
+            for _, c := range tt.checks {
+                c(t, r, err)   // each check gets (t, result, error)
+            }
+        })
+    }
 }
+```
+
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . Transfer
 ```
 
 ## Testing Approach

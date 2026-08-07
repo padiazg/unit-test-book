@@ -15,12 +15,12 @@ Real-world examples:
 
 ```go
 type Temperature struct {
-	Value float64
-	Unit  TemperatureUnit
+    Value float64
+    Unit  TemperatureUnit
 }
 
 func Convert(t Temperature, to TemperatureUnit) (Temperature, error) {
-	// converts between Celsius, Fahrenheit, Kelvin
+    // converts between Celsius, Fahrenheit, Kelvin
 }
 ```
 
@@ -32,50 +32,59 @@ type checkConvertFn func(*testing.T, Temperature, error)
 var checkConvert = func(fns ...checkConvertFn) []checkConvertFn { return fns }
 
 func TestConvert(t *testing.T) {
-	// Factory: takes expected value, returns check closure
-	checkValue := func(want float64) checkConvertFn {
-		return func(t *testing.T, got Temperature, err error) {
-			t.Helper()
-			assert.NoError(t, err)
-			assert.InDelta(t, want, got.Value, 0.01)
-		}
-	}
+    // Factory: takes expected value, returns check closure
+    checkValue := func(want float64) checkConvertFn {
+        return func(t *testing.T, got Temperature, err error) {
+            t.Helper()
+            assert.NoError(t, err)
+            assert.InDelta(t, want, got.Value, 0.01)
+        }
+    }
 
-	checkUnit := func(want TemperatureUnit) checkConvertFn {
-		return func(t *testing.T, got Temperature, err error) {
-			t.Helper()
-			assert.NoError(t, err)
-			assert.Equal(t, want, got.Unit)
-		}
-	}
+    checkUnit := func(want TemperatureUnit) checkConvertFn {
+        return func(t *testing.T, got Temperature, err error) {
+            t.Helper()
+            assert.NoError(t, err)
+            assert.Equal(t, want, got.Unit)
+        }
+    }
 
-	checkError := func(want string) checkConvertFn {
-		return func(t *testing.T, _ Temperature, err error) {
-			t.Helper()
-			if assert.Error(t, err) {
-				assert.Contains(t, err.Error(), want)
-			}
-		}
-	}
+    checkError := func(want string) checkConvertFn {
+        return func(t *testing.T, _ Temperature, err error) {
+            t.Helper()
+            if assert.Error(t, err) {
+                assert.Contains(t, err.Error(), want)
+            }
+        }
+    }
 
-	tests := []struct {
-		name     string
-		input    Temperature
-		target   TemperatureUnit
-		checks   []checkConvertFn
-	}{
-		{
-			name:   "Celsius to Fahrenheit",
-			input:  Temperature{Value: 100, Unit: Celsius},
-			target: Fahrenheit,
-			checks: checkConvert(
-				checkValue(212),       // closure captures 212
-				checkUnit(Fahrenheit),  // closure captures Fahrenheit
-			),
-		},
-		// ...
-	}
+    tests := []struct {
+        name     string
+        input    Temperature
+        target   TemperatureUnit
+        checks   []checkConvertFn
+    }{
+        {
+            name:   "Celsius to Fahrenheit",
+            input:  Temperature{Value: 100, Unit: Celsius},
+            target: Fahrenheit,
+            checks: checkConvert(
+                checkValue(212),       // closure captures 212
+                checkUnit(Fahrenheit),  // closure captures Fahrenheit
+            ),
+        },
+        // ...
+    }
 }
+```
+
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . Convert
 ```
 
 ## Testing Approach
