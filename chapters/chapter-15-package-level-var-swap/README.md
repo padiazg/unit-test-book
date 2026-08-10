@@ -16,11 +16,11 @@ Real-world example: `hexago/internal/core/domain/category.go:33` — `var uuidGe
 var randRead = rand.Read
 
 func GenerateShortCode(length int) (string, error) {
-	bytes := make([]byte, length)
-	if _, err := randRead(bytes); err != nil {
-		return "", fmt.Errorf("generating code: %w", err)
-	}
-	return hex.EncodeToString(bytes)[:length], nil
+    bytes := make([]byte, length)
+    if _, err := randRead(bytes); err != nil {
+        return "", fmt.Errorf("generating code: %w", err)
+    }
+    return hex.EncodeToString(bytes)[:length], nil
 }
 ```
 
@@ -28,39 +28,49 @@ func GenerateShortCode(length int) (string, error) {
 
 ```go
 func TestGenerateShortCode(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		code, err := GenerateShortCode(8)
-		require.NoError(t, err)
-		assert.Len(t, code, 8)
-	})
+    t.Run("success", func(t *testing.T) {
+        code, err := GenerateShortCode(8)
+        require.NoError(t, err)
+        assert.Len(t, code, 8)
+    })
 
-	t.Run("deterministic output", func(t *testing.T) {
-		orig := randRead
-		randRead = func(b []byte) (int, error) {
-			for i := range b {
-				b[i] = 0xAB
-			}
-			return len(b), nil
-		}
-		defer func() { randRead = orig }()
+    t.Run("deterministic output", func(t *testing.T) {
+        orig := randRead
+        randRead = func(b []byte) (int, error) {
+            for i := range b {
+                b[i] = 0xAB
+            }
+            return len(b), nil
+        }
+        defer func() { randRead = orig }()
 
-		code, err := GenerateShortCode(4)
-		require.NoError(t, err)
-		assert.Equal(t, "abababab", code)
-	})
+        code, err := GenerateShortCode(4)
+        require.NoError(t, err)
+        assert.Equal(t, "abababab", code)
+    })
 
-	t.Run("read error", func(t *testing.T) {
-		orig := randRead
-		randRead = func(b []byte) (int, error) {
-			return 0, errors.New("entropy depleted")
-		}
-		defer func() { randRead = orig }()
+    t.Run("read error", func(t *testing.T) {
+        orig := randRead
+        randRead = func(b []byte) (int, error) {
+            return 0, errors.New("entropy depleted")
+        }
+        defer func() { randRead = orig }()
 
-		_, err := GenerateShortCode(8)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "entropy depleted")
-	})
+        _, err := GenerateShortCode(8)
+        assert.Error(t, err)
+        assert.Contains(t, err.Error(), "entropy depleted")
+    })
 }
+```
+
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . GenerateID --style simple
+go-testgen gen . GenerateShortCode --style simple
 ```
 
 ## Testing Approach
