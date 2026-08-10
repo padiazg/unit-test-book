@@ -2,9 +2,11 @@ package http_client_interface_mock
 
 import (
 	"bytes"
-	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,116 +21,213 @@ func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return m.DoFunc(req)
 }
 
-type checkWeatherFn func(*testing.T, *WeatherResponse, error)
+type checkResultFn func(*testing.T, *Result)
 
-var checkWeather = func(fns ...checkWeatherFn) []checkWeatherFn { return fns }
+func checkResult(fns ...checkResultFn) []checkResultFn {
+	return fns
+}
 
-func TestWeatherClient_GetWeather(t *testing.T) {
-	checkError := func(want string) checkWeatherFn {
-		return func(t *testing.T, _ *WeatherResponse, err error) {
-			t.Helper()
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), want)
+func checkResultError(want string) checkResultFn {
+	return func(t *testing.T, r *Result) {
+		t.Helper()
+
+		if want == "" {
+			require.NoError(t, r.Error)
+			assert.True(t, r.Success)
+			return
 		}
-	}
 
-	checkCity := func(want string) checkWeatherFn {
-		return func(t *testing.T, r *WeatherResponse, err error) {
-			t.Helper()
-			require.NoError(t, err)
-			assert.Equal(t, want, r.City)
-		}
+		require.Error(t, r.Error)
+		assert.Contains(t, r.Error.Error(), want)
+		assert.False(t, r.Success)
 	}
+}
 
-	checkTemperature := func(want float64) checkWeatherFn {
-		return func(t *testing.T, r *WeatherResponse, err error) {
-			t.Helper()
-			require.NoError(t, err)
-			assert.Equal(t, want, r.Temperature)
-		}
-	}
+func TestWebhookNotifier_TypeNameConnectClose(t *testing.T) {
+	n := New(&Config{Name: "webhook-01"})
 
+	assert.Equal(t, "webhook", n.Type())
+	assert.Equal(t, "webhook-01", n.Name())
+	assert.NoError(t, n.Connect())
+	assert.NoError(t, n.Close())
+}
+
+func TestWebhookNotifier_Deliver(t *testing.T) {
 	tests := []struct {
-		name   string
-		before func(*WeatherClient)
-		checks []checkWeatherFn
+		name    string
+		config  *Config
+		message *Notification
+		before  func(*WebhookNotifier)
+		checks  []checkResultFn
 	}{
 		{
-			name: "successful response",
-			before: func(c *WeatherClient) {
-				c.client = &mockHTTPClient{
+			name: "json-marshal-error",
+			before: func(n *WebhookNotifier) {
+				n.jsonMarshal = func(_ any) ([]byte, error) { return nil, fmt.Errorf("error from json.Marshal") }
+			},
+			checks: checkResult(
+				checkResultError("error from json.Marshal"),
+			),
+		},
+		{
+			name: "http-newrequest-error",
+			before: func(n *WebhookNotifier) {
+				n.httpNewRequest = func(_, _ string, _ io.Reader) (*http.Request, error) {
+					return nil, fmt.Errorf("test error on http.NewRequest")
+				}
+			},
+			checks: checkResult(
+				checkResultError("test error on http.NewRequest"),
+			),
+		},
+		{
+			name: "client-do-error",
+			before: func(n *WebhookNotifier) {
+				n.client = &mockHTTPClient{
 					DoFunc: func(req *http.Request) (*http.Response, error) {
-						resp := WeatherResponse{City: "London", Temperature: 15.5, Unit: "C"}
-						data, _ := json.Marshal(resp)
+						return nil, errors.New("test http new request error")
+					},
+				}
+			},
+			checks: checkResult(
+				checkResultError("test http new request error"),
+			),
+		},
+		{
+			name:    "http-status-code-not-ok",
+			config:  &Config{Endpoint: "http://localhost:8080/webhook"},
+			message: &Notification{Event: "test-event", Data: "test-data"},
+			before: func(n *WebhookNotifier) {
+				n.client = &mockHTTPClient{
+					DoFunc: func(req *http.Request) (*http.Response, error) {
+						return &http.Response{
+							StatusCode: http.StatusForbidden,
+							Body:       io.NopCloser(bytes.NewBufferString(`Forbidden`)),
+						}, nil
+					},
+				}
+			},
+			checks: checkResult(
+				checkResultError("webhook returned non-OK status: 403"),
+			),
+		},
+		{
+			name: "http-status-code-ok",
+			config: &Config{
+				Endpoint: "http://localhost:8080/webhook",
+				Headers: map[string]string{
+					"Header-XYZ": "xyz",
+				},
+			},
+			message: &Notification{Event: "test-event", Data: "test-data"},
+			before: func(n *WebhookNotifier) {
+				n.client = &mockHTTPClient{
+					DoFunc: func(req *http.Request) (*http.Response, error) {
 						return &http.Response{
 							StatusCode: http.StatusOK,
-							Body:       io.NopCloser(bytes.NewReader(data)),
+							Body:       io.NopCloser(bytes.NewBufferString(`Ok`)),
 						}, nil
 					},
 				}
 			},
-			checks: checkWeather(
-				checkCity("London"),
-				checkTemperature(15.5),
-			),
-		},
-		{
-			name: "not found",
-			before: func(c *WeatherClient) {
-				c.client = &mockHTTPClient{
-					DoFunc: func(req *http.Request) (*http.Response, error) {
-						return &http.Response{
-							StatusCode: http.StatusNotFound,
-							Body:       io.NopCloser(bytes.NewReader([]byte(`{}`))),
-						}, nil
-					},
-				}
-			},
-			checks: checkWeather(
-				checkError("unexpected status: 404"),
-			),
-		},
-		{
-			name: "server error",
-			before: func(c *WeatherClient) {
-				c.client = &mockHTTPClient{
-					DoFunc: func(req *http.Request) (*http.Response, error) {
-						return &http.Response{
-							StatusCode: http.StatusInternalServerError,
-							Body:       io.NopCloser(bytes.NewReader([]byte(`{}`))),
-						}, nil
-					},
-				}
-			},
-			checks: checkWeather(
-				checkError("unexpected status: 500"),
-			),
-		},
-		{
-			name: "network error",
-			before: func(c *WeatherClient) {
-				c.client = &mockHTTPClient{
-					DoFunc: func(req *http.Request) (*http.Response, error) {
-						return nil, assert.AnError
-					},
-				}
-			},
-			checks: checkWeather(
-				checkError("executing request"),
+			checks: checkResult(
+				checkResultError(""),
 			),
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewWeatherClient("https://api.weather.com", "test-key")
+			n := New(tt.config)
+
 			if tt.before != nil {
-				tt.before(c)
+				tt.before(n)
 			}
 
-			weather, err := c.GetWeather("London")
-			for _, fn := range tt.checks {
-				fn(t, weather, err)
+			r := n.Deliver(tt.message)
+
+			for _, c := range tt.checks {
+				c(t, r)
+			}
+		})
+	}
+}
+
+func TestWebhookNotifier_getClient(t *testing.T) {
+	type testCase struct {
+		name   string
+		config *Config
+		before func(*WebhookNotifier)
+		checks []func(*testing.T, *WebhookNotifier)
+	}
+
+	var (
+		checkClientTypeFn = func(clientType interface{}) func(*testing.T, *WebhookNotifier) {
+			return func(t *testing.T, n *WebhookNotifier) {
+				t.Helper()
+				assert.Equalf(t, reflect.TypeOf(clientType), reflect.TypeOf(n.client), "getClient type = %v, expected %v", reflect.TypeOf(n.client), reflect.TypeOf(clientType))
+			}
+		}
+
+		checkClientInsecure = func(want bool) func(*testing.T, *WebhookNotifier) {
+			return func(t *testing.T, n *WebhookNotifier) {
+				t.Helper()
+				insecureSkipVerify := false
+				if transport, ok := n.client.(*http.Client).Transport.(*http.Transport); ok {
+					insecureSkipVerify = transport.TLSClientConfig.InsecureSkipVerify
+				}
+				assert.Equalf(t, want, insecureSkipVerify, "getClient insecure = %t, expected %t", insecureSkipVerify, want)
+			}
+		}
+	)
+
+	tests := []testCase{
+		{
+			name: "existing-client",
+			before: func(n *WebhookNotifier) {
+				n.client = &mockHTTPClient{}
+			},
+			checks: []func(*testing.T, *WebhookNotifier){
+				checkClientTypeFn(&mockHTTPClient{}),
+			},
+		},
+		{
+			name: "empty-client",
+			before: func(n *WebhookNotifier) {
+				n.client = nil
+			},
+			checks: []func(*testing.T, *WebhookNotifier){
+				checkClientTypeFn(&http.Client{}),
+				checkClientInsecure(false),
+			},
+		},
+		{
+			name:   "insecure-client",
+			config: &Config{Insecure: true},
+			before: func(n *WebhookNotifier) {
+				n.client = nil
+			},
+			checks: []func(*testing.T, *WebhookNotifier){
+				checkClientTypeFn(&http.Client{}),
+				checkClientInsecure(true),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			n := New(tt.config)
+
+			if tt.before != nil {
+				tt.before(n)
+			}
+
+			_ = n.getClient()
+
+			for _, c := range tt.checks {
+				c(t, n)
 			}
 		})
 	}

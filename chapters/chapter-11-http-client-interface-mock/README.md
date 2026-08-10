@@ -8,7 +8,9 @@ section: mocking
 
 Define an `HTTPClient` interface with a `Do(*http.Request) (*http.Response, error)` method matching the `http.Client` signature. Production code uses this interface; tests provide a stub that returns canned responses. This is the simplest and most testable HTTP mocking strategy: no test server, no transport hacking, just an interface.
 
-Real-world example: `jokes/internal/adapters/secondary/external/joke_client.go:18` — `type HTTPClient interface { Do(*http.Request) (*http.Response, error) }`.
+`WebhookNotifier.Deliver` marshals a notification to JSON and POSTs it to a configured endpoint through `getClient()`, which returns the injected `HTTPClient` or lazily creates a real `*http.Client`. Because delivery only depends on the interface, tests replace the client with `mockHTTPClient` and control every response — success, non-OK status, network failure — without touching the network.
+
+Real-world example: `notifier/connector/webhook/webhook.go:17` — `type HTTPClient interface { Do(*http.Request) (*http.Response, error) }`; mocked at `webhook_test.go:20` (`mockHTTPClient`) and exercised in `webhook_test.go:305` (`TestWebhookNotifier_Deliver`).
 
 ## Code
 
@@ -17,22 +19,41 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-type WeatherClient struct {
-	client HTTPClient
-	apiKey string
+type WebhookNotifier struct {
+	*Config
+	client         HTTPClient
+	jsonMarshal    func(v any) ([]byte, error)
+	httpNewRequest func(method, url string, body io.Reader) (*http.Request, error)
 }
 
-func NewWeatherClient(client HTTPClient, apiKey string) *WeatherClient {
-	return &WeatherClient{client: client, apiKey: apiKey}
-}
-
-func (c *WeatherClient) GetWeather(city string) (*WeatherResponse, error) {
-	url := fmt.Sprintf("https://api.weather.com/v1/%s?key=%s", url.PathEscape(city), c.apiKey)
-	resp, err := c.client.Do(req)
+// Deliver sends a notification to the webhook endpoint
+func (n *WebhookNotifier) Deliver(message *Notification) *Result {
+	payload, err := n.jsonMarshal(message)
 	if err != nil {
-		return nil, fmt.Errorf("weather request: %w", err)
+		return &Result{Success: false, Error: err}
 	}
-	// parse response...
+
+	r, err := n.httpNewRequest(http.MethodPost, n.Endpoint, bytes.NewBuffer(payload))
+	if err != nil {
+		return &Result{Success: false, Error: err}
+	}
+
+	r.Header.Set("Content-Type", "application/json")
+	for k, v := range n.Headers {
+		r.Header.Set(k, v)
+	}
+
+	resp, err := n.getClient().Do(r)
+	if err != nil {
+		return &Result{Success: false, Error: err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return &Result{Success: false, Error: fmt.Errorf("webhook returned non-OK status: %d", resp.StatusCode)}
+	}
+
+	return &Result{Success: true}
 }
 ```
 
@@ -47,80 +68,73 @@ func (m *mockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	return m.DoFunc(req)
 }
 
-func TestWeatherClient_GetWeather(t *testing.T) {
-	type fields struct {
-		client *mockHTTPClient
+func TestWebhookNotifier_Deliver(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *Config
+		message *Notification
+		before  func(*WebhookNotifier)
+		checks  []checkResultFn
+	}{
+		{
+			name: "client-do-error",
+			before: func(n *WebhookNotifier) {
+				n.client = &mockHTTPClient{
+					DoFunc: func(req *http.Request) (*http.Response, error) {
+						return nil, errors.New("test http new request error")
+					},
+				}
+			},
+			checks: checkResult(checkResultError("test http new request error")),
+		},
+		{
+			name:    "http-status-code-not-ok",
+			config:  &Config{Endpoint: "http://localhost:8080/webhook"},
+			message: &Notification{Event: "test-event", Data: "test-data"},
+			before: func(n *WebhookNotifier) {
+				n.client = &mockHTTPClient{
+					DoFunc: func(req *http.Request) (*http.Response, error) {
+						return &http.Response{
+							StatusCode: http.StatusForbidden,
+							Body:       io.NopCloser(bytes.NewBufferString(`Forbidden`)),
+						}, nil
+					},
+				}
+			},
+			checks: checkResult(checkResultError("webhook returned non-OK status: 403")),
+		},
+		{
+			name: "http-status-code-ok",
+			config: &Config{
+				Endpoint: "http://localhost:8080/webhook",
+				Headers:  map[string]string{"Header-XYZ": "xyz"},
+			},
+			message: &Notification{Event: "test-event", Data: "test-data"},
+			before: func(n *WebhookNotifier) {
+				n.client = &mockHTTPClient{
+					DoFunc: func(req *http.Request) (*http.Response, error) {
+						return &http.Response{
+							StatusCode: http.StatusOK,
+							Body:       io.NopCloser(bytes.NewBufferString(`Ok`)),
+						}, nil
+					},
+				}
+			},
+			checks: checkResult(checkResultError("")),
+		},
 	}
-
-	before := func(t *testing.T) fields {
-		t.Helper()
-		return fields{client: &mockHTTPClient{}}
-	}
-
-	t.Run("success", func(t *testing.T) {
-		f := before(t)
-		f.client.DoFunc = func(req *http.Request) (*http.Response, error) {
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body: io.NopCloser(strings.NewReader(
-					`{"city":"London","temp_c":15.5,"condition":"Cloudy"}`,
-				)),
-			}, nil
-		}
-
-		c := NewWeatherClient(f.client, "test-key")
-		w, err := c.GetWeather("London")
-		require.NoError(t, err)
-		assert.Equal(t, "London", w.City)
-		assert.Equal(t, 15.5, w.TempC)
-	})
-
-	t.Run("API error", func(t *testing.T) {
-		f := before(t)
-		f.client.DoFunc = func(req *http.Request) (*http.Response, error) {
-			return &http.Response{
-				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(strings.NewReader(`{}`)),
-			}, nil
-		}
-
-		_, err := NewWeatherClient(f.client, "test-key").GetWeather("London")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "500")
-	})
-
-	t.Run("network failure", func(t *testing.T) {
-		f := before(t)
-		f.client.DoFunc = func(req *http.Request) (*http.Response, error) {
-			return nil, errors.New("connection refused")
-		}
-
-		_, err := NewWeatherClient(f.client, "test-key").GetWeather("London")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "connection refused")
-	})
-
-	t.Run("invalid JSON", func(t *testing.T) {
-		f := before(t)
-		f.client.DoFunc = func(req *http.Request) (*http.Response, error) {
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(strings.NewReader(`not json`)),
-			}, nil
-		}
-
-		_, err := NewWeatherClient(f.client, "test-key").GetWeather("London")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "parse")
-	})
+	// ... table-driven runner applies before hooks, calls Deliver, runs checks
 }
 ```
+
+## Scaffold
+
 
 ## Testing Approach
 
 The HTTP client interface mock:
 
-1. **Interface segregation** — `HTTPClient{ Do(*http.Request) (*http.Response, error) }` is a single-method interface. Production `http.Client` satisfies it. The stub implements it with a function field.
-2. **Per-test behavior** — each subtest sets `DoFunc` to return exactly what it needs (success, errors, status codes). No global mock state leaks between tests.
-3. **Error paths visible** — network failures, HTTP errors, and malformed responses are all trivially testable by changing what `DoFunc` returns. No need to start/stop test servers.
+1. **Interface segregation** — `HTTPClient{ Do(*http.Request) (*http.Response, error) }` is a single-method interface. Production `*http.Client` satisfies it; `mockHTTPClient` implements it with a `DoFunc` field. `getClient()` returns the injected mock when present, otherwise a real client.
+2. **Per-case behavior** — each table row sets `before` to wire the mock: `DoFunc` returns exactly what the case needs (network error, 403, 200). No global mock state leaks between tests.
+3. **Error paths visible** — network failures, HTTP errors, and marshaling/request-construction failures are all trivially testable by swapping `DoFunc` (or `jsonMarshal`/`httpNewRequest`). No need to start/stop test servers.
 4. **Zero dependencies** — the mock is a 6-line struct. No testify/mock, no httptest. The pattern scales: add a `DoFunc` field and each test configures it inline.

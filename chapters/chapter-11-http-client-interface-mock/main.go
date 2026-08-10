@@ -1,62 +1,119 @@
 package http_client_interface_mock
 
 import (
+	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 )
 
+type Notification struct {
+	Event string
+	Data  interface{}
+}
+
+type Result struct {
+	Error   error
+	Success bool
+}
+
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-type WeatherClient struct {
-	client  HTTPClient
-	APIKey  string
-	BaseURL string
+type Config struct {
+	Headers  map[string]string
+	Name     string
+	Endpoint string
+	Insecure bool
 }
 
-func NewWeatherClient(baseURL, apiKey string) *WeatherClient {
-	return &WeatherClient{
-		BaseURL: baseURL,
-		APIKey:  apiKey,
-		client:  &http.Client{},
-	}
+type WebhookNotifier struct {
+	*Config
+	client         HTTPClient
+	jsonMarshal    func(v any) ([]byte, error)
+	httpNewRequest func(method, url string, body io.Reader) (*http.Request, error)
 }
 
-type WeatherResponse struct {
-	City        string  `json:"city"`
-	Unit        string  `json:"unit"`
-	Temperature float64 `json:"temperature"`
+func New(config *Config) *WebhookNotifier {
+	return (&WebhookNotifier{}).New(config)
 }
 
-func (c *WeatherClient) GetWeather(city string) (*WeatherResponse, error) {
-	url := fmt.Sprintf("%s/weather?city=%s&apikey=%s", c.BaseURL, city, c.APIKey)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
+func (n *WebhookNotifier) New(config *Config) *WebhookNotifier {
+	if config == nil {
+		config = &Config{}
 	}
 
-	resp, err := c.client.Do(req)
+	n.Config = config
+	n.jsonMarshal = json.Marshal
+	n.httpNewRequest = http.NewRequest
+
+	return n
+}
+
+func (n *WebhookNotifier) Type() string {
+	return "webhook"
+}
+
+func (n *WebhookNotifier) Name() string {
+	return n.Config.Name
+}
+
+func (n *WebhookNotifier) Connect() error {
+	return nil
+}
+
+func (n *WebhookNotifier) Close() error {
+	return nil
+}
+
+// Deliver sends a notification to the webhook endpoint
+func (n *WebhookNotifier) Deliver(message *Notification) *Result {
+	// Serialize the notification data to JSON
+	payload, err := n.jsonMarshal(message)
 	if err != nil {
-		return nil, fmt.Errorf("executing request: %w", err)
+		return &Result{Success: false, Error: err}
+	}
+
+	// Send the POST request to the webhook endpoint
+	r, err := n.httpNewRequest(http.MethodPost, n.Endpoint, bytes.NewBuffer(payload))
+	if err != nil {
+		return &Result{Success: false, Error: err}
+	}
+
+	// Set headers
+	r.Header.Set("Content-Type", "application/json")
+	for k, v := range n.Headers {
+		r.Header.Set(k, v)
+	}
+
+	resp, err := n.getClient().Do(r)
+	if err != nil {
+		return &Result{Success: false, Error: err}
 	}
 	defer resp.Body.Close()
 
+	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+		return &Result{Success: false, Error: fmt.Errorf("webhook returned non-OK status: %d", resp.StatusCode)}
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading body: %w", err)
+	return &Result{Success: true}
+}
+
+func (n *WebhookNotifier) getClient() HTTPClient {
+	if n.client != nil {
+		return n.client
 	}
 
-	var weather WeatherResponse
-	if err := json.Unmarshal(body, &weather); err != nil {
-		return nil, fmt.Errorf("decoding response: %w", err)
+	n.client = &http.Client{}
+	if n.Insecure {
+		n.client.(*http.Client).Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
 	}
 
-	return &weather, nil
+	return n.client
 }
