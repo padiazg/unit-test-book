@@ -188,6 +188,7 @@ def write_chapter_page(out_dir, num, dirname, title, sections):
     test = sections.get("Test", "")
     scaffold = sections.get("Scaffold", "")
     approach = sections.get("Testing Approach", "")
+    proscons = sections.get("Pros and Cons", "")
 
     parts = [f"# Chapter {num:02d}: {title}"]
     if description:
@@ -200,6 +201,8 @@ def write_chapter_page(out_dir, num, dirname, title, sections):
         parts.extend(["", "## Scaffold", "", scaffold])
     if approach:
         parts.extend(["", "## Testing Approach", "", approach])
+    if proscons:
+        parts.extend(["", "## Pros and Cons", "", proscons])
 
     parts.extend(["", "---", "", f"[View source code]({GITHUB_REPO}/tree/master/chapters/{dirname}/) on GitHub"])
 
