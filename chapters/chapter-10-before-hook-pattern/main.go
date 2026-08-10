@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -12,6 +13,14 @@ import (
 // GoListRunner runs `go list -json -e` and returns stdout bytes.
 type GoListRunner interface {
 	List(ctx context.Context, patterns []string) ([]byte, error)
+}
+
+// goListRunner is the production GoListRunner: it invokes the go command.
+type goListRunner struct{}
+
+func (goListRunner) List(ctx context.Context, patterns []string) ([]byte, error) {
+	args := append([]string{"list", "-json", "-e"}, patterns...)
+	return exec.CommandContext(ctx, "go", args...).Output()
 }
 
 // Target represents a single Go package resolved from a pattern.
@@ -59,7 +68,7 @@ func NewResolver(config *ResolverConfig) *Resolver {
 		config = &ResolverConfig{}
 	}
 	if config.Runner == nil {
-		config.Runner = &mockGoListRunner{}
+		config.Runner = goListRunner{}
 	}
 	return &Resolver{config: config}
 }
