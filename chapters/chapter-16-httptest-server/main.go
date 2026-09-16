@@ -1,6 +1,7 @@
 package httptest_server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -49,7 +50,11 @@ func (api *UserAPI) GetUser(id int) (*User, error) {
 
 func (api *UserAPI) CreateUser(name, email string) (*User, error) {
 	url := fmt.Sprintf("%s/users", api.BaseURL)
-	resp, err := api.client.Post(url, "application/json", nil)
+
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, `{"name":"%s","email":"%s"}`, name, email)
+
+	resp, err := api.client.Post(url, "application/json", &buf)
 	if err != nil {
 		return nil, fmt.Errorf("create request failed: %w", err)
 	}
