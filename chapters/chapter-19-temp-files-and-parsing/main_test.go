@@ -6,120 +6,160 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestLoadConfig(t *testing.T) {
-	t.Run("valid config file", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "config.json")
-		err := os.WriteFile(path, []byte(`{"host":"example.com","port":9090,"debug":true,"timeout":60}`), 0644)
-		require.NoError(t, err)
+type entityConstructorInfoFn func(*testing.T, *entityCtorInfo, error)
 
-		cfg, err := LoadConfig(path)
-		require.NoError(t, err)
-		assert.Equal(t, "example.com", cfg.Host)
-		assert.Equal(t, 9090, cfg.Port)
-		assert.True(t, cfg.Debug)
-		assert.Equal(t, 60, cfg.Timeout)
-	})
+var checkentityConstructorInfo = func(fns ...entityConstructorInfoFn) []entityConstructorInfoFn { return fns }
 
-	t.Run("file not found", func(t *testing.T) {
-		_, err := LoadConfig("/nonexistent/path/config.json")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "reading config file")
-	})
-
-	t.Run("empty path", func(t *testing.T) {
-		_, err := LoadConfig("")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "path is empty")
-	})
-
-	t.Run("empty file", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "empty.json")
-		err := os.WriteFile(path, []byte{}, 0644)
-		require.NoError(t, err)
-
-		_, err = LoadConfig(path)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "empty")
-	})
-
-	t.Run("invalid JSON", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "bad.json")
-		err := os.WriteFile(path, []byte(`{invalid}`), 0644)
-		require.NoError(t, err)
-
-		_, err = LoadConfig(path)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "parsing config")
-	})
-
-	t.Run("partial config uses zero values", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "partial.json")
-		err := os.WriteFile(path, []byte(`{"host":"test.local"}`), 0644)
-		require.NoError(t, err)
-
-		cfg, err := LoadConfig(path)
-		require.NoError(t, err)
-		assert.Equal(t, "test.local", cfg.Host)
-		assert.Equal(t, 0, cfg.Port) // zero value
-		assert.False(t, cfg.Debug)   // zero value
-	})
+func checkentityConstructorInfoError(want string) entityConstructorInfoFn {
+	return func(t *testing.T, _ *entityCtorInfo, err error) {
+		t.Helper()
+		if want == "" {
+			assert.NoErrorf(t, err, "checkentityConstructorInfoError: expected no error, got %v", err)
+			return
+		}
+		if assert.Errorf(t, err, "checkentityConstructorInfoError: expected error %q", want) {
+			assert.Containsf(t, err.Error(), want, "checkentityConstructorInfoError mismatch")
+		}
+	}
 }
 
-func TestLoadConfigWithDefaults(t *testing.T) {
-	t.Run("empty path returns defaults", func(t *testing.T) {
-		cfg, err := LoadConfigWithDefaults("")
-		require.NoError(t, err)
-		assert.Equal(t, "localhost", cfg.Host)
-		assert.Equal(t, 8080, cfg.Port)
-		assert.Equal(t, 30, cfg.Timeout)
-	})
-
-	t.Run("missing file returns defaults", func(t *testing.T) {
-		cfg, err := LoadConfigWithDefaults("/nonexistent/config.json")
-		require.NoError(t, err)
-		assert.Equal(t, "localhost", cfg.Host)
-	})
-
-	t.Run("file overrides defaults", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "config.json")
-		os.WriteFile(path, []byte(`{"port":3000}`), 0644)
-
-		cfg, err := LoadConfigWithDefaults(path)
-		require.NoError(t, err)
-		assert.Equal(t, "localhost", cfg.Host) // default
-		assert.Equal(t, 3000, cfg.Port)        // override
-		assert.Equal(t, 30, cfg.Timeout)       // default
-	})
+func checkNewArgs(want string) entityConstructorInfoFn {
+	return func(t *testing.T, info *entityCtorInfo, _ error) {
+		t.Helper()
+		assert.Equal(t, want, info.newArgs)
+	}
 }
 
-func TestSaveConfig(t *testing.T) {
-	t.Run("save and reload", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "subdir", "config.json")
+func checkCreateFields(want []Field) entityConstructorInfoFn {
+	return func(t *testing.T, info *entityCtorInfo, _ error) {
+		t.Helper()
+		assert.Equal(t, want, info.createFields)
+	}
+}
 
-		cfg := &Config{Host: "saved.host", Port: 3000, Debug: true, Timeout: 45}
-		err := SaveConfig(path, cfg)
-		require.NoError(t, err)
+func checkNeedsUUID(want bool) entityConstructorInfoFn {
+	return func(t *testing.T, info *entityCtorInfo, _ error) {
+		t.Helper()
+		assert.Equal(t, want, info.needsUUID)
+	}
+}
 
-		loaded, err := LoadConfig(path)
-		require.NoError(t, err)
-		assert.Equal(t, "saved.host", loaded.Host)
-		assert.Equal(t, 3000, loaded.Port)
-		assert.True(t, loaded.Debug)
-		assert.Equal(t, 45, loaded.Timeout)
-	})
+func checkNeedsTime(want bool) entityConstructorInfoFn {
+	return func(t *testing.T, info *entityCtorInfo, _ error) {
+		t.Helper()
+		assert.Equal(t, want, info.needsTime)
+	}
+}
 
-	t.Run("nil config", func(t *testing.T) {
-		err := SaveConfig("/tmp/test.json", nil)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "nil")
-	})
+func writeEntityFile(t *testing.T, content string) string {
+	t.Helper()
+	dir := t.TempDir()
+	p := filepath.Join(dir, "entity.go")
+	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func Test_entityConstructorInfo(t *testing.T) {
+	tests := []struct {
+		name       string
+		entityName string
+		content    string
+		checks     []entityConstructorInfoFn
+	}{
+		{
+			name:       "string id plus extra field",
+			entityName: "Category",
+			content:    "package categories\nfunc NewCategory(id string, description string) (*Category, error) { return nil, nil }\n",
+			checks: checkentityConstructorInfo(
+				checkentityConstructorInfoError(""),
+				checkNewArgs(`uuid.NewString(), input.Description`),
+				checkCreateFields([]Field{{Name: "Description", Type: "string"}}),
+				checkNeedsUUID(true),
+			),
+		},
+		{
+			name:       "uuid id and timestamp",
+			entityName: "User",
+			content:    "package users\nfunc NewUser(id uuid.UUID, createdAt time.Time) (*User, error) { return nil, nil }\n",
+			checks: checkentityConstructorInfo(
+				checkentityConstructorInfoError(""),
+				checkNewArgs("uuid.New(), time.Now()"),
+				checkNeedsUUID(true),
+				checkNeedsTime(true),
+			),
+		},
+		{
+			name:       "id only",
+			entityName: "Note",
+			content:    "package notes\nfunc NewNote(id string) (*Note, error) { return nil, nil }\n",
+			checks: checkentityConstructorInfo(
+				checkentityConstructorInfoError(""),
+				checkNewArgs("uuid.NewString()"),
+				checkNeedsUUID(true),
+			),
+		},
+		{
+			name:       "no id field",
+			entityName: "Greeting",
+			content:    "package greetings\nfunc NewGreeting(name string, email string) (*Greeting, error) { return nil, nil }\n",
+			checks: checkentityConstructorInfo(
+				checkentityConstructorInfoError(""),
+				checkNewArgs("input.Name, input.Email"),
+				checkCreateFields([]Field{{Name: "Name", Type: "string"}, {Name: "Email", Type: "string"}}),
+			),
+		},
+		{
+			name:       "grouped param names",
+			entityName: "Pair",
+			content:    "package pairs\nfunc NewPair(a, b string) (*Pair, error) { return nil, nil }\n",
+			checks: checkentityConstructorInfo(
+				checkentityConstructorInfoError(""),
+				checkNewArgs("input.A, input.B"),
+				checkCreateFields([]Field{{Name: "A", Type: "string"}, {Name: "B", Type: "string"}}),
+			),
+		},
+		{
+			name:       "pointer and slice fields become input fields",
+			entityName: "Order",
+			content:    "package orders\nfunc NewOrder(id string, total float64, items []string, at *time.Time) (*Order, error) { return nil, nil }\n",
+			checks: checkentityConstructorInfo(
+				checkentityConstructorInfoError(""),
+				checkNewArgs("uuid.NewString(), input.Total, input.Items, input.At"),
+				checkCreateFields([]Field{
+					{Name: "Total", Type: "float64"},
+					{Name: "Items", Type: "[]string"},
+					{Name: "At", Type: "*time.Time"},
+				}),
+				checkNeedsUUID(true),
+				checkNeedsTime(true),
+			),
+		},
+		{
+			name:       "constructor missing",
+			entityName: "Category",
+			content:    "package categories\n",
+			checks: checkentityConstructorInfo(
+				checkentityConstructorInfoError("constructor NewCategory not found"),
+			),
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeEntityFile(t, tt.content)
+			r, err := entityConstructorInfo(path, tt.entityName)
+			for _, c := range tt.checks {
+				c(t, r, err)
+			}
+		})
+	}
+}
+
+func Test_entityConstructorInfo_missingFile(t *testing.T) {
+	_, err := entityConstructorInfo(filepath.Join(t.TempDir(), "nope.go"), "Category")
+	assert.Error(t, err)
 }

@@ -1,101 +1,108 @@
 package temp_files_and_parsing
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"go/types"
+	"strings"
 )
 
-type Config struct {
-	Host    string `json:"host"`
-	Port    int    `json:"port"`
-	Debug   bool   `json:"debug"`
-	Timeout int    `json:"timeout"`
+type Field struct {
+	Name string
+	Type string
 }
 
-func DefaultConfig() Config {
-	return Config{
-		Host:    "localhost",
-		Port:    8080,
-		Debug:   false,
-		Timeout: 30,
-	}
+type entityCtorInfo struct {
+	newArgs      string  // pre-joined argument list for New<entity>(...)
+	createFields []Field // fields for Create<entity>Input (the non-auto params)
+	needsTime    bool    // generated code references time.*
+	needsUUID    bool    // generated code references uuid.*
 }
 
-func LoadConfig(path string) (*Config, error) {
-	if path == "" {
-		return nil, fmt.Errorf("path is empty")
-	}
-
-	data, err := os.ReadFile(path)
+func entityConstructorInfo(entityFile, entityName string) (*entityCtorInfo, error) {
+	f, err := parser.ParseFile(token.NewFileSet(), entityFile, nil, 0)
 	if err != nil {
-		return nil, fmt.Errorf("reading config file: %w", err)
+		return nil, fmt.Errorf("parsing entity file %s: %w", entityFile, err)
 	}
 
-	if len(data) == 0 {
-		return nil, fmt.Errorf("config file is empty")
+	constructorName := "New" + entityName
+	params, found := extractConstructorParams(f, constructorName)
+	if !found {
+		return nil, fmt.Errorf("constructor %s not found in %s", constructorName, entityFile)
 	}
 
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing config: %w", err)
-	}
-
-	return &cfg, nil
-}
-
-func LoadConfigWithDefaults(path string) (*Config, error) {
-	if path == "" {
-		cfg := DefaultConfig()
-		return &cfg, nil
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			cfg := DefaultConfig()
-			return &cfg, nil
+	info := &entityCtorInfo{}
+	for _, p := range params {
+		switch {
+		case isIDParam(p.name) && (p.typ == "string" || p.typ == "uuid.UUID"):
+			if p.typ == "uuid.UUID" {
+				info.newArgsOrAppend("uuid.New()")
+			} else {
+				info.newArgsOrAppend("uuid.NewString()")
+			}
+			info.needsUUID = true
+		case p.typ == "time.Time":
+			info.newArgsOrAppend("time.Now()")
+			info.needsTime = true
+		default:
+			fieldName := toTitleCase(p.name)
+			info.createFields = append(info.createFields, Field{Name: fieldName, Type: p.typ})
+			info.newArgsOrAppend("input." + fieldName)
+			if strings.Contains(p.typ, "time.") {
+				info.needsTime = true
+			}
+			if strings.Contains(p.typ, "uuid.") {
+				info.needsUUID = true
+			}
 		}
-		return nil, fmt.Errorf("reading config: %w", err)
 	}
-
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing config: %w", err)
-	}
-
-	if cfg.Host == "" {
-		cfg.Host = "localhost"
-	}
-	if cfg.Port == 0 {
-		cfg.Port = 8080
-	}
-	if cfg.Timeout == 0 {
-		cfg.Timeout = 30
-	}
-
-	return &cfg, nil
+	return info, nil
 }
 
-func SaveConfig(path string, cfg *Config) error {
-	if cfg == nil {
-		return fmt.Errorf("config is nil")
-	}
+type namedParam struct {
+	name string
+	typ  string
+}
 
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("creating directory: %w", err)
+func extractConstructorParams(f *ast.File, funcName string) ([]namedParam, bool) {
+	for _, decl := range f.Decls {
+		fd, ok := decl.(*ast.FuncDecl)
+		if !ok || fd.Name.Name != funcName || fd.Type.Params == nil {
+			continue
+		}
+		var params []namedParam
+		for _, pf := range fd.Type.Params.List {
+			typ := types.ExprString(pf.Type)
+			names := pf.Names
+			if len(names) == 0 {
+				names = []*ast.Ident{{Name: "_"}}
+			}
+			for _, n := range names {
+				params = append(params, namedParam{name: n.Name, typ: typ})
+			}
+		}
+		return params, true
 	}
+	return nil, false
+}
 
-	data, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshaling config: %w", err)
+func isIDParam(name string) bool {
+	return strings.EqualFold(name, "id") || strings.EqualFold(name, "uuid")
+}
+
+func (c *entityCtorInfo) newArgsOrAppend(arg string) {
+	if c.newArgs == "" {
+		c.newArgs = arg
+	} else {
+		c.newArgs += ", " + arg
 	}
+}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("writing config: %w", err)
+func toTitleCase(s string) string {
+	if len(s) == 0 {
+		return s
 	}
-
-	return nil
+	return strings.ToUpper(s[:1]) + s[1:]
 }
