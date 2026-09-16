@@ -16,90 +16,177 @@ Real-world example: `notifier/internal/adapters/primary/http/notification_handle
 type TaskHandler struct{}
 
 func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		respondError(w, http.StatusMethodNotAllowed, "only POST allowed")
-		return
-	}
-	if ct := r.Header.Get("Content-Type"); ct != "application/json" {
-		respondError(w, http.StatusUnsupportedMediaType, "JSON required")
-		return
-	}
-	var task Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		respondError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON: %v", err))
-		return
-	}
-	task.Title = strings.TrimSpace(task.Title)
-	if task.Title == "" {
-		respondError(w, http.StatusBadRequest, "title is required")
-		return
-	}
-	// create task...
+    if r.Method != http.MethodPost {
+        respondError(w, http.StatusMethodNotAllowed, "only POST allowed")
+        return
+    }
+    if ct := r.Header.Get("Content-Type"); ct != "application/json" {
+        respondError(w, http.StatusUnsupportedMediaType, "JSON required")
+        return
+    }
+    var task Task
+    if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+        respondError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON: %v", err))
+        return
+    }
+    task.Title = strings.TrimSpace(task.Title)
+    if task.Title == "" {
+        respondError(w, http.StatusBadRequest, "title is required")
+        return
+    }
+    // create task...
 }
 ```
 
 ## Test
 
 ```go
+type checkHandlerFn func(*testing.T, *httptest.ResponseRecorder)
+
+var checkHandler = func(fns ...checkHandlerFn) []checkHandlerFn { return fns }
+
 func TestTaskHandler_CreateTask(t *testing.T) {
-	tests := []struct {
-		name   string
-		method string
-		ctype  string
-		body   string
-		checks []checkHandlerFn
-	}{
-		{
-			name:   "success",
-			method: http.MethodPost,
-			ctype:  "application/json",
-			body:   `{"title":"Buy milk"}`,
-			checks: checkHandler(checkStatus(http.StatusCreated), checkTaskTitle("Buy milk")),
-		},
-		{
-			name:   "wrong method",
-			method: http.MethodGet,
-			ctype:  "application/json",
-			body:   `{"title":"test"}`,
-			checks: checkHandler(checkStatus(http.StatusMethodNotAllowed), checkError("only POST")),
-		},
-		{
-			name:   "wrong content type",
-			method: http.MethodPost,
-			ctype:  "text/plain",
-			body:   `{"title":"test"}`,
-			checks: checkHandler(checkStatus(http.StatusUnsupportedMediaType), checkError("JSON required")),
-		},
-		{
-			name:   "invalid JSON",
-			method: http.MethodPost,
-			ctype:  "application/json",
-			body:   `{bad}`,
-			checks: checkHandler(checkStatus(http.StatusBadRequest), checkError("invalid JSON")),
-		},
-		{
-			name:   "empty title",
-			method: http.MethodPost,
-			ctype:  "application/json",
-			body:   `{"title":"  "}`,
-			checks: checkHandler(checkStatus(http.StatusBadRequest), checkError("title is required")),
-		},
-	}
+    checkStatus := func(want int) checkHandlerFn {
+        return func(t *testing.T, w *httptest.ResponseRecorder) {
+            t.Helper()
+            assert.Equal(t, want, w.Code)
+        }
+    }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest(tt.method, "/tasks", strings.NewReader(tt.body))
-			r.Header.Set("Content-Type", tt.ctype)
+    checkError := func(want string) checkHandlerFn {
+        return func(t *testing.T, w *httptest.ResponseRecorder) {
+            t.Helper()
+            var body map[string]string
+            json.NewDecoder(w.Body).Decode(&body)
+            assert.Contains(t, body["error"], want)
+        }
+    }
 
-			NewTaskHandler().CreateTask(w, r)
+    checkTaskTitle := func(want string) checkHandlerFn {
+        return func(t *testing.T, w *httptest.ResponseRecorder) {
+            t.Helper()
+            var task Task
+            json.NewDecoder(w.Body).Decode(&task)
+            assert.Equal(t, want, task.Title)
+        }
+    }
 
-			for _, fn := range tt.checks {
-				fn(t, w) // each check receives the recorder
-			}
-		})
-	}
+    tests := []struct {
+        name   string
+        method string
+        ctype  string
+        body   string
+        checks []checkHandlerFn
+    }{
+        {
+            name:   "successful creation",
+            method: http.MethodPost,
+            ctype:  "application/json",
+            body:   `{"title":"Buy milk"}`,
+            checks: checkHandler(
+                checkStatus(http.StatusCreated),
+                checkTaskTitle("Buy milk"),
+            ),
+        },
+        {
+            name:   "wrong method",
+            method: http.MethodGet,
+            ctype:  "application/json",
+            body:   `{"title":"test"}`,
+            checks: checkHandler(
+                checkStatus(http.StatusMethodNotAllowed),
+                checkError("only POST"),
+            ),
+        },
+        {
+            name:   "wrong content type",
+            method: http.MethodPost,
+            ctype:  "text/plain",
+            body:   `{"title":"test"}`,
+            checks: checkHandler(
+                checkStatus(http.StatusUnsupportedMediaType),
+                checkError("JSON required"),
+            ),
+        },
+        {
+            name:   "invalid JSON",
+            method: http.MethodPost,
+            ctype:  "application/json",
+            body:   `{invalid}`,
+            checks: checkHandler(
+                checkStatus(http.StatusBadRequest),
+                checkError("invalid JSON"),
+            ),
+        },
+        {
+            name:   "empty title",
+            method: http.MethodPost,
+            ctype:  "application/json",
+            body:   `{"title":"  "}`,
+            checks: checkHandler(
+                checkStatus(http.StatusBadRequest),
+                checkError("title is required"),
+            ),
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            w := httptest.NewRecorder()
+            r := httptest.NewRequest(tt.method, "/tasks", strings.NewReader(tt.body))
+            r.Header.Set("Content-Type", tt.ctype)
+
+            h := NewTaskHandler()
+            h.CreateTask(w, r)
+
+            for _, fn := range tt.checks {
+                fn(t, w)
+            }
+        })
+    }
 }
+
+func TestTaskHandler_GetTask(t *testing.T) {
+    t.Run("existing task", func(t *testing.T) {
+        w := httptest.NewRecorder()
+        r := httptest.NewRequest(http.MethodGet, "/tasks/42", nil)
+
+        NewTaskHandler().GetTask(w, r)
+
+        assert.Equal(t, http.StatusOK, w.Code)
+
+        var task Task
+        require.NoError(t, json.NewDecoder(w.Body).Decode(&task))
+        assert.Equal(t, "42", task.ID)
+    })
+
+    t.Run("missing id", func(t *testing.T) {
+        w := httptest.NewRecorder()
+        r := httptest.NewRequest(http.MethodGet, "/tasks/", nil)
+
+        NewTaskHandler().GetTask(w, r)
+
+        assert.Equal(t, http.StatusBadRequest, w.Code)
+    })
+
+    t.Run("wrong method", func(t *testing.T) {
+        w := httptest.NewRecorder()
+        r := httptest.NewRequest(http.MethodPost, "/tasks/1", nil)
+
+        NewTaskHandler().GetTask(w, r)
+
+        assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
+    })
+}
+```
+
+## Scaffold
+
+Generate test scaffolding with go-testgen:
+
+```shell
+go-testgen report . --format table
+go-testgen gen . TaskHandler.CreateTask
 ```
 
 ## Testing Approach
