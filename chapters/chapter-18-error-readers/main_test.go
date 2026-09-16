@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type errorReader struct{}
@@ -21,51 +20,6 @@ func (e errorReader) Close() error {
 	return nil
 }
 
-func TestReadResponseBody(t *testing.T) {
-	t.Run("successful read", func(t *testing.T) {
-		resp := &http.Response{
-			Body: io.NopCloser(strings.NewReader(`{"status":"ok"}`)),
-		}
-		body, err := ReadResponseBody(resp)
-		require.NoError(t, err)
-		assert.Equal(t, `{"status":"ok"}`, body)
-	})
-
-	t.Run("read error", func(t *testing.T) {
-		resp := &http.Response{
-			Body: errorReader{},
-		}
-		body, err := ReadResponseBody(resp)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "simulated read failure")
-		assert.Empty(t, body)
-	})
-
-	t.Run("nil body", func(t *testing.T) {
-		resp := &http.Response{Body: nil}
-		body, err := ReadResponseBody(resp)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "response body is nil")
-		assert.Empty(t, body)
-	})
-
-	t.Run("nil response", func(t *testing.T) {
-		body, err := ReadResponseBody(nil)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "response is nil")
-		assert.Empty(t, body)
-	})
-
-	t.Run("empty body", func(t *testing.T) {
-		resp := &http.Response{
-			Body: io.NopCloser(strings.NewReader("")),
-		}
-		body, err := ReadResponseBody(resp)
-		require.NoError(t, err)
-		assert.Empty(t, body)
-	})
-}
-
 func TestProcessAPIResponse(t *testing.T) {
 	t.Run("request error", func(t *testing.T) {
 		// a URL that will fail to connect
@@ -73,4 +27,88 @@ func TestProcessAPIResponse(t *testing.T) {
 		assert.Error(t, err)
 		assert.Empty(t, body)
 	})
+}
+
+type ReadResponseBodyFn func(*testing.T, string, error)
+
+var checkReadResponseBody = func(fns ...ReadResponseBodyFn) []ReadResponseBodyFn { return fns }
+
+func checkError(want string) ReadResponseBodyFn {
+	return func(t *testing.T, _ string, err error) {
+		t.Helper()
+		if want == "" {
+			assert.NoErrorf(t, err, "checkError: expected no error, got %v", err)
+			return
+		}
+		if assert.Errorf(t, err, "checkError: expected error %q", want) {
+			assert.Containsf(t, err.Error(), want, "checkError mismatch")
+		}
+	}
+}
+
+func checkBody(want string) ReadResponseBodyFn {
+	return func(t *testing.T, b string, _ error) {
+		t.Helper()
+		assert.Equal(t, want, b)
+	}
+}
+
+func TestReadResponseBody(t *testing.T) {
+	tests := []struct {
+		name   string
+		resp   *http.Response
+		checks []ReadResponseBodyFn
+	}{
+		{
+			name: "successful read",
+			resp: &http.Response{
+				Body: io.NopCloser(strings.NewReader(`{"status":"ok"}`)),
+			},
+			checks: checkReadResponseBody(
+				checkError(""),
+				checkBody(`{"status":"ok"}`),
+			),
+		},
+		{
+			name: "read error",
+			resp: &http.Response{Body: errorReader{}},
+			checks: checkReadResponseBody(
+				checkError("simulated read failure"),
+				checkBody(""),
+			),
+		},
+		{
+			name: "nil body",
+			resp: &http.Response{Body: nil},
+			checks: checkReadResponseBody(
+				checkError("response body is nil"),
+				checkBody(""),
+			),
+		},
+		{
+			name: "nil respons",
+			resp: nil,
+			checks: checkReadResponseBody(
+				checkError("response is nil"),
+				checkBody(""),
+			),
+		},
+		{
+			name: "empty body",
+			resp: &http.Response{Body: io.NopCloser(strings.NewReader(""))},
+			checks: checkReadResponseBody(
+				checkError(""),
+				checkBody(""),
+			),
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := ReadResponseBody(tt.resp)
+			for _, c := range tt.checks {
+				c(t, r, err)
+			}
+		})
+	}
 }
