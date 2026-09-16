@@ -1,0 +1,198 @@
+# Skills manifest — curated routing table from unit-test-book chapters.
+# One row per chapter. Generated skills land in target_dir.
+#
+# Rules:
+#   - `style` ∈ {table, check, simple, manual}
+#   - `demand_style: true` → chapter with no row triggers a BUILD ERROR
+#   - `route_keys` — flat list; router matches these against function signatures
+#   - `notes` — optional LLM-facing guidance for the AI maintenance prompt
+#   - `exempt_skills` — never generated/overwritten
+
+router_name: testgen-scenario
+router_emoji: "🧭"
+shared_dir: shared
+target_dir: ../go-testgen/skills
+plugin_dir: /home/pato/.agents/skills/go-testgen
+exempt_skills: [gen-test-cases, closure-check-tests]
+draft_style: check
+demand_style: true
+require_route_keys: true
+strict_semver: true
+version: "1.0.0"
+
+chapters:
+  1:
+    name: pattern-01-table-validation
+    style: table
+    scenario: "constructor returning (T, error), inputs validated before return"
+    route_keys: ["(T, error) constructor", "input validation", "boundary check", "required field", "wantErr"]
+  2:
+    name: pattern-02-value-assertions
+    style: table
+    scenario: "pure transform returning a value; compare against want T"
+    route_keys: ["pure function", "single return value", "DeepEqual", "want T", "value assertion"]
+  3:
+    name: pattern-03-fields-struct-inputs
+    style: table
+    scenario: "function with many input params; group into a struct for test vectors"
+    route_keys: ["multiple input params", "input struct", "grouped inputs", "test vector", "params"]
+  4:
+    name: pattern-04-subtest-naming
+    style: table
+    scenario: "many related test cases; use descriptive constants or natural names"
+    route_keys: ["subtest", "many cases", "descriptive names", "naming", "t.Run"]
+  5:
+    name: pattern-05-typed-check-functions
+    style: check
+    scenario: "fn returns multiple values needing field/object-level asserts via closures"
+    route_keys: ["composable assertion", "checkXxxFn type", "multi-return", "closure check", "typed check"]
+  6:
+    name: pattern-06-check-collection-builder
+    style: check
+    scenario: "many checks compose into a collection; use builder var checkXxx"
+    route_keys: ["check collection", "builder pattern", "var check", "compose checks", "multi-check"]
+  7:
+    name: pattern-07-check-factory-closures
+    style: check
+    scenario: "parametrized expectations returned as closures; factory functions"
+    route_keys: ["factory closure", "parametrized check", "checkStatus", "expectation factory", "check factory"]
+  8:
+    name: pattern-08-error-message-verification
+    style: check
+    scenario: "verify specific error message content via assert.Contains(err.Error())"
+    route_keys: ["error message", "error string", "assert.Contains", "err.Error", "error verification"]
+  9:
+    name: pattern-09-output-string-inspection
+    style: check
+    scenario: "inspect string output or log content via Contains/NotContains"
+    route_keys: ["string output", "log content", "Contains", "NotContains", "output inspection"]
+  10:
+    name: pattern-10-before-hook-pattern
+    style: check
+    scenario: "before hook returns fresh test state; inject dependencies per case"
+    route_keys: ["before hook", "before func", "fixture injection", "per-case setup", "before pattern"]
+  11:
+    name: pattern-11-http-client-interface-mock
+    style: check
+    scenario: "HTTP client interface mock; inject mock for Do/Get calls"
+    route_keys: ["HTTP client", "HTTPClient", "mock client", "interface mock", "Do method"]
+  12:
+    name: pattern-12-roundtripper-mock
+    style: check
+    scenario: "RoundTripper mock at transport layer; DryRunTransport pattern"
+    route_keys: ["RoundTripper", "transport mock", "DryRunTransport", "http.Transport", "transport layer"]
+  13:
+    name: pattern-13-testify-mock-interfaces
+    style: check
+    scenario: "interface methods stubbed via testify Mock with On().Return()"
+    route_keys: ["testify mock", "mock.Mock", "On().Return()", "interface stub", "mock interface"]
+  14:
+    name: pattern-14-function-variable-injection
+    style: check
+    scenario: "function fields (json.Marshal, http.NewRequest) injected for test seams"
+    route_keys: ["function variable", "field injection", "json.Marshal", "http.NewRequest", "test seam"]
+  15:
+    name: pattern-15-package-var-swap
+    style: check
+    scenario: "package-level variable swap with defer restore for minimal seam injection"
+    route_keys: ["package variable", "var swap", "defer restore", "global override", "minimal injection"]
+  16:
+    name: pattern-16-httptest-server
+    style: manual
+    scenario: "httptest.Server starts a real HTTP server for full-stack HTTP tests"
+    route_keys: ["httptest.Server", "real HTTP server", "integration HTTP", "full-stack HTTP", "httptest"]
+  17:
+    name: pattern-17-httptest-recorder
+    style: manual
+    scenario: "httptest.ResponseRecorder captures handler output without a server"
+    route_keys: ["ResponseRecorder", "handler unit test", "httptest recorder", "handler test", "recorder"]
+  18:
+    name: pattern-18-error-readers
+    style: manual
+    scenario: "errorReader returns errors on demand to test I/O failure paths"
+    route_keys: ["errorReader", "IO error", "failure path", "io.Reader", "error injection"]
+  19:
+    name: pattern-19-temp-files-parsing
+    style: check
+    scenario: "t.TempDir() + file operations; parse and test file-based logic"
+    route_keys: ["TempDir", "file I/O", "parsing", "filesystem test", "temp file", "file ops"]
+  20:
+    name: pattern-20-channel-delivery
+    style: check
+    scenario: "buffered channel + select; fan-out workers with graceful close"
+    route_keys: ["channel", "buffered channel", "channel select", "fan-out", "worker", "channel delivery"]
+  21:
+    name: pattern-21-panic-recovery
+    style: check
+    scenario: "defer recover() converts panics to errors; test panic paths"
+    route_keys: ["panic recovery", "defer recover", "wantPanic", "panic", "error conversion"]
+  22:
+    name: pattern-22-goroutine-run-loops
+    style: check
+    scenario: "select-based event loop with context cancellation and started-channel sync"
+    route_keys: ["goroutine", "goroutine run loop", "select", "context cancellation", "WaitGroup", "event loop"]
+  23:
+    name: pattern-23-goroutine-leak
+    style: manual
+    scenario: "goleak.VerifyTestMain catches leaked goroutines after test"
+    route_keys: ["goroutine leak", "goleak", "VerifyTestMain", "leak detection", "leak"]
+  24:
+    name: pattern-24-ast-complexity
+    style: manual
+    scenario: "go/parser + go/ast to compute cyclomatic complexity metrics"
+    route_keys: ["AST parsing", "go/parser", "go/ast", "cyclomatic complexity", "complexity"]
+  25:
+    name: pattern-25-benchmarks
+    style: manual
+    scenario: "b.N loops, sub-benchmarks, b.ResetTimer for performance comparison"
+    route_keys: ["benchmark", "b.N", "b.ResetTimer", "performance", "sub-benchmark", "Benchmark"]
+  26:
+    name: pattern-26-parallel-tests
+    style: manual
+    scenario: "t.Parallel() with safe (mutex/atomic) vs unsafe concurrent patterns"
+    route_keys: ["t.Parallel", "parallel test", "concurrent", "race condition", "race detector"]
+  27:
+    name: pattern-27-service-mocked-ports
+    style: check
+    scenario: "service-layer ports mocked with testify/mock; test business logic in isolation"
+    route_keys: ["service layer", "mocked port", "repository mock", "business logic", "port mock"]
+  28:
+    name: pattern-28-json-format
+    style: table
+    scenario: "JSON marshal/unmarshal roundtrip; assert.JSONEq and serialization tests"
+    route_keys: ["JSON", "marshal", "unmarshal", "roundtrip", "assert.JSONEq", "serialization"]
+  29:
+    name: pattern-29-setup-teardown-fixtures
+    style: check
+    scenario: "struct-based fixtures with Setup/Teardown for isolated test state"
+    route_keys: ["fixture", "Setup", "Teardown", "isolated state", "test fixture", "setup teardown"]
+  30:
+    name: pattern-30-composable-check-navigation
+    style: check
+    scenario: "navigator factories descend into nested output; delegate to sub-checks"
+    route_keys: ["navigator", "nested output", "composable check", "sub-check", "navigation factory"]
+  31:
+    name: pattern-31-inline-check-closures
+    style: check
+    scenario: "inline closures for single-use checks; no factory extraction needed"
+    route_keys: ["inline closure", "single-use check", "anonymous check", "inline assertion"]
+  32:
+    name: pattern-32-interface-extraction
+    style: check
+    scenario: "wrap concrete library behind small interface; inject through constructor; swap with mock"
+    route_keys: ["interface extraction", "third-party", "wrap interface", "concrete library", "dependency extraction"]
+  33:
+    name: pattern-33-event-driven-run-loop
+    style: check
+    scenario: "Run() returns event channel; before/after lifecycle; select-with-timeout event capture"
+    route_keys: ["event-driven", "event channel", "select timeout", "event run loop", "lifecycle hook"]
+  34:
+    name: pattern-34-embedded-infrastructure
+    style: manual
+    scenario: "in-memory replacements (miniredis) for realistic protocol coverage"
+    route_keys: ["embedded infrastructure", "miniredis", "in-memory", "protocol test", "Redis mock"]
+  35:
+    name: pattern-35-capturing-stdout
+    style: manual
+    scenario: "os.Pipe() + swap os.Stdout/Stderr to test console output"
+    route_keys: ["stdout", "stderr", "os.Pipe", "console output", "capturing output", "os.Stdout"]

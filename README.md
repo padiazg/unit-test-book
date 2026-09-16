@@ -44,7 +44,7 @@ Each chapter is a **standalone Go module** with production code, tests, and an e
 | 16 | [httptest.Server Integration](chapters/chapter-16-httptest-server/README.md) | Real HTTP test server | notes |
 | 17 | [httptest.ResponseRecorder](chapters/chapter-17-httptest-response-recorder/README.md) | Handler unit tests | pantry/http |
 | 18 | [Error Readers](chapters/chapter-18-error-readers/README.md) | `errorReader` for IO errors | notes |
-| 19 | [Temporary Files & Parsing](chapters/chapter-19-temp-files-and-parsing/README.md) | `t.TempDir()` + file ops | go-testgen, go-crap |
+| 19 | [Temporary Files & Parsing](chapters/chapter-19-temp-files-and-parsing/README.md) | `t.TempDir()` + file ops | hexago/generator |
 | 35 | [Stdout/Stderr Capture](chapters/chapter-35-capturing-stdout-stderr/README.md) | `os.Pipe()` + swap `os.Stdout` | hackerrank, go-crap |
 
 ### Section 5: Concurrency
